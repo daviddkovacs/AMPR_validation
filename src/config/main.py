@@ -6,7 +6,8 @@ from readers.ERA5 import ERA
 
 import pandas as pd
 
-def validator(ref_obj, test_obj, anc_obj = None ):
+def validator(ref_obj, test_obj, anc_obj = None ,
+              comparison = None):
 
     # We load the dataframes
     air_pd = ref_obj.to_pandas()
@@ -20,36 +21,46 @@ def validator(ref_obj, test_obj, anc_obj = None ):
     bio_pd = bio_obj.to_pandas()
     bio_var = bio_obj.bio_var
 
-    # Calc MPDI for satellite
-    sat_pd["MPDI"] = mpdi(sat_pd["bt_V"], sat_pd["bt_H"])
 
-    ref_nn_air2sat, test_nn_air2sat = collocate_datasets(air_pd, sat_pd)
-    ref_nn_air2era, bio_nn_air2era = collocate_datasets(air_pd, bio_pd)
+    if comparison == "air2sat":
+        ref_nn, test_nn = collocate_datasets(air_pd, sat_pd)
+        sat_pd["MPDI"] = mpdi(sat_pd["bt_V"], sat_pd["bt_H"])
 
-    scatter_plot(ref_nn_air2sat["MPDI"],
-                 test_nn_air2sat["MPDI"],
-                 xlabel=f"AMPR MPDI {air_freq} GHz",
-                 ylabel=f"AMSR2 MPDI {sat_freq} GHz",)
+        plot_var = "MPDI"
+        xlabel = f"AMPR MPDI {air_freq} GHz"
+        ylabel = f"AMSR2 MPDI {sat_freq}"
 
-    scatter_plot(ref_nn_air2era["MPDI"],
-                 bio_nn_air2era[bio_var],
-                 xlabel=f"AMPR MPDI {air_freq} GHz",
-                 ylabel=f"ERA5 {bio_var}",
-                 xmin_val=0,
-                 xmax_val=0.2,
-                 ymin_val=0,
-                 ymax_val=5,
-                 )
+    if comparison == "air2bio":
+        ref_nn, test_nn= collocate_datasets(air_pd, bio_pd)
 
-    longitude_plot(ref_x= air_pd["lon"] ,
-                   ref_y = air_pd["MPDI"],
-                   test_x = test_nn_air2sat["lon"],
-                   test_y = test_nn_air2sat["MPDI"],
-                   test2_x= bio_nn_air2era["lon"],
-                   test2_y = bio_nn_air2era[bio_var],
-                   air_obj = ref_obj,
-                   sat_obj = test_obj,
-                   bio_obj=anc_obj)
+        plot_var = "MPDI"
+        xlabel = f"AMPR MPDI {air_freq} GHz"
+        ylabel = f"AMSR2 MPDI {sat_freq}"
+
+    if comparison == "sat2bio":
+        ref_nn, test_nn= collocate_datasets(sat_pd, bio_pd)
+        ref_nn["MPDI"] = mpdi(sat_pd["bt_V"], sat_pd["bt_H"])
+
+        plot_var = bio_var
+        xlabel = f"AMSR2 MPDI {sat_freq}"
+        ylabel = f"ERA5 {bio_var}"
+
+
+    scatter_plot(ref_nn["bt_V"],
+                 test_nn[plot_var],
+                 xlabel=xlabel,
+                 ylabel=ylabel,)
+
+
+    # longitude_plot(ref_x= air_pd["lon"] ,
+    #                ref_y = air_pd["MPDI"],
+    #                test_x = test_nn_air2sat["lon"],
+    #                test_y = test_nn_air2sat["MPDI"],
+    #                test2_x= bio_nn_air2era["lon"],
+    #                test2_y = bio_nn_air2era[bio_var],
+    #                air_obj = ref_obj,
+    #                sat_obj = test_obj,
+    #                bio_obj=anc_obj)
 
 def validator_all(path_air,
                   path_sat,
@@ -66,11 +77,6 @@ def validator_all(path_air,
     datelist = ["2024-10-22", "2024-10-25", "2024-10-31"]
     flight_direction_list = ["WE", "EW"]
     scan_direction_list = ["1_25", "26_50"]
-
-    if "bio" in comparison:
-        plot_var = bio_var
-    else:
-        plot_var = "MPDI"
 
     ref_compound = pd.DataFrame({})
     test_compound = pd.DataFrame({})
@@ -103,14 +109,19 @@ def validator_all(path_air,
                     ref_nn, test_nn = collocate_datasets(air_pd, sat_pd)
                     ref_compound = pd.concat([ref_compound, ref_nn])
                     test_compound = pd.concat([test_compound, test_nn])
-
                     test_compound["MPDI"] = mpdi(test_compound["bt_V"], test_compound["bt_H"])
+
+                    plot_var = "MPDI"
+                    ylabel = f"AMSR2 MPDI {sat_freq}"
 
                 if comparison == "air2bio":
                     # Airborne to ERA 5
                     ref_nn, test_nn = collocate_datasets(air_pd, bio_pd)
                     ref_compound = pd.concat([ref_compound, ref_nn])
                     test_compound = pd.concat([test_compound, test_nn])
+
+                    plot_var = bio_var
+                    ylabel = f"ERA5 {bio_var}"
 
                 if comparison == "sat2bio":
                     # Satellite to ERA 5 variable
@@ -120,14 +131,12 @@ def validator_all(path_air,
 
                     test_compound["MPDI"] = mpdi(test_compound["bt_V"], test_compound["bt_H"])
 
+                    plot_var = bio_var
+                    ylabel = f"ERA5 {bio_var}"
 
 
-    scatter_plot(ref_compound[plot_var],
+    scatter_plot(ref_compound["MPDI"],
                  test_compound[plot_var],
                  xlabel=f"AMPR MPDI {air_freq} GHz",
-                 ylabel=f"AMSR2 MPDI {sat_freq}",
-                 # xmin_val=0,
-                 # xmax_val=0.2,
-                 # ymin_val=0,
-                 # ymax_val=5,
+                 ylabel = ylabel,
                  )
