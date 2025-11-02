@@ -1,5 +1,5 @@
 from readers.Air import AirborneData
-from readers.Sat import SatelliteData
+from readers.Sat import BTData
 from readers.ERA5 import ERA
 from utilities.utils import mpdi, collocate_datasets
 from utilities.plotting import scatter_plot, longitude_plot
@@ -96,13 +96,13 @@ if __name__ == "__main__":
                               air_freq=air_freq,
                               )
 
-    AMSR2_OBS = SatelliteData(path=path_sat,
-                              sat_sensor=sat_sensor,
-                              date=date,
-                              overpass=overpass,
-                              target_res=target_res,
-                              sat_freq=sat_freq,
-                              )
+    AMSR2_OBS = BTData(path=path_sat,
+                       sat_sensor=sat_sensor,
+                       date=date,
+                       overpass=overpass,
+                       target_res=target_res,
+                       sat_freq=sat_freq,
+                       )
     ERA_SM  = ERA(path=path_era,
                   date =date,
                   variable=variable)

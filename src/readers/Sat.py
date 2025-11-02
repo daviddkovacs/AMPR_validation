@@ -1,5 +1,4 @@
 import os.path
-import rioxarray
 import matplotlib
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
@@ -8,7 +7,7 @@ import xarray as xr
 import pandas as pd
 import os
 
-class SatelliteData:
+class BTData:
     """
     Class to read in Satellite data from (currently from AMSR2)
 
@@ -38,6 +37,7 @@ class SatelliteData:
         date_fmt = datetime.strptime(date, "%Y-%m-%d").strftime("%Y%m%d")
 
         pattern = f"{sat_sensor}_l1bt_{overpass}_{date_fmt}_{target_res}km.nc"
+
         self.bt_file = os.path.join(path,overpass,year_month,pattern)
 
 
@@ -45,6 +45,7 @@ class SatelliteData:
 
         dataset = self.to_xarray()
         pandas = dataset.to_dataframe()
+        pandas.columns = pandas.columns.str.upper()
         pandas = pandas.dropna(subset=['scantime']).reset_index()
         pandas = pandas[["lon","lat","scantime", f"bt_{self.sat_freq}V", f"bt_{self.sat_freq}H"]]
         pandas = pandas.rename(columns={f"bt_{self.sat_freq}V": "bt_V",
@@ -59,3 +60,24 @@ class SatelliteData:
         dataset = dataset.squeeze("time", drop=True)
 
         return dataset
+
+class LPRMData(BTData):
+
+    def __init__(self, path, sat_sensor, date, overpass, target_res, sat_freq=None):
+
+        year_month = datetime.strptime(date, "%Y-%m-%d").strftime("%Y%m")
+        date_fmt = datetime.strptime(date, "%Y-%m-%d").strftime("%Y%m%d")
+        pattern = f"{sat_sensor.upper()}_LPRM_VEGC_{overpass}{date_fmt}_{target_res}km_v061.nc"
+        bt_file = os.path.join(path, overpass, year_month, pattern)
+
+        super().__init__(path, sat_sensor, date, overpass, target_res, sat_freq)
+        self.bt_file = bt_file
+
+
+    def to_pandas(self):
+
+        dataset = self.to_xarray()
+        pandas = dataset.to_dataframe()
+        pandas = pandas.dropna(subset=['SCANTIME']).reset_index()
+
+        return pandas

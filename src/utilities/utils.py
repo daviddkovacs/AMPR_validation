@@ -114,3 +114,32 @@ def mpdi(v_freq,
     mpdi = (v_freq-h_freq) / (v_freq + h_freq)
 
     return mpdi
+
+def bbox(df,
+         list):
+
+    df = df.loc[df["lat"] > list[1]]
+    df = df.loc[df["lat"] < list[3]]
+
+    df = df.loc[df["lon"] > list[0]]
+    df = df.loc[df["lon"] < list[2]]
+
+    return df
+
+def calc_surface_temperature(bt_Ka_input: np.ndarray) -> np.ndarray:
+    """
+    Calculates surface temperature as needed for LPRM radiative transfer equation.
+
+    Parameters
+    ----------
+    bt_Ka_input (np.ndarray): Ka-band BT input, to retrieve surface temperature. Usually measured by sensor (not SMAP).
+
+    Returns
+    -------
+    temperature (np.ndarray): Surface temperature in Kelvins.
+    """
+
+    temperature = (0.893 * bt_Ka_input) + 44.8
+    # temperature = np.where(temperature <= 274.15, np.nan, temperature)
+
+    return temperature
