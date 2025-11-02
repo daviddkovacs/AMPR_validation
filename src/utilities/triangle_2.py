@@ -1,4 +1,4 @@
-from readers.Sat import BTData
+from readers.Sat import BTData, LPRMData
 import matplotlib
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
@@ -44,17 +44,17 @@ def scatter_density(ref,test):
     ax.scatter_density(ref, test)
     density = ax.scatter_density(ref, test,cmap=white_viridis, dpi=30)
     fig.colorbar(density, label='Number of points per pixel')
-    ax.set_xlim(0, 1.5)
-    ax.set_ylim(270, 330)
+    # ax.set_xlim(0, 1.5)
+    # ax.set_ylim(270, 330)
     fig.show()
 
 
 
-list =  [
-    -79.00494159526059,
-    -53.73093802864525,
-    60.124452669058115,
-    -4.866119632910738
+list =   [
+    -17.290976514610435,
+    9.686831338513585,
+    -0.27692493991642664,
+    18.119575850788607
   ]
 
 
@@ -70,14 +70,15 @@ datelist = [
     # "2023-08-29",
     # "2023-08-30",
     "2024-10-24",
-            "2024-10-25",
-            "2024-10-26",
-            "2024-10-27",]
+    "2024-10-25",
+    "2024-10-26",
+    "2024-10-27",
+]
 
 for d in datelist:
     KA = BTData(path = path_sat,
                    date = d,
-                   sat_freq = sat_freq,
+                   sat_freq = "36.5",
                    overpass = overpass,
                    sat_sensor = sat_sensor,
                    target_res = target_res,
@@ -89,15 +90,27 @@ for d in datelist:
 
     BT = BTData(path = path_sat,
                    date = d,
-                   sat_freq = '18.7',
+                   sat_freq = sat_freq,
                    overpass = overpass,
                    sat_sensor = sat_sensor,
                    target_res = target_res,
                    )
+
     BT = BT.to_pandas()
     BT = bbox(BT, list)
 
     BT["MPDI"] =  mpdi(BT["bt_V"], BT["bt_H"])
+
+    # LPRM = LPRMData(path = path_sat,
+    #                date = d,
+    #                sat_freq = sat_freq,
+    #                overpass = overpass,
+    #                sat_sensor = sat_sensor,
+    #                target_res = target_res,
+    #                )
+    #
+    # LPRM = LPRM.to_pandas()
+    # LPRM = bbox(LPRM, list)
 
 
     scatter_density(BT["MPDI"],
