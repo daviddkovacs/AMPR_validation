@@ -5,6 +5,7 @@ from scipy.stats import gaussian_kde
 import pandas as pd
 import numpy as np
 import os
+from matplotlib.colors import LinearSegmentedColormap
 
 
 def statistics(ref,test):
@@ -96,7 +97,7 @@ def longitude_plot(ref_x,
     scan_direction = air_obj.scan_direction
 
     # Bio variables
-    bio_var = bio_obj.variable
+    bio_var = bio_obj.bio_var
 
     # Common variables
     date = air_obj.air_freq
@@ -141,4 +142,32 @@ def longitude_plot(ref_x,
         plt.savefig(os.path.join(savedir,rf"{date}_{flight_direction}_{scan_direction}_{air_freq}_long.png"))
     if show_fig:
         plt.show()
+
+def scatter_density(ref,test,
+                    xlabel = None,
+                    ylabel = None,
+                    xlim = None,
+                    ylim = None,):
+
+    white_viridis = LinearSegmentedColormap.from_list('white_viridis', [
+        (0, '#ffffff'),
+        (1e-20, '#440053'),
+        (0.2, '#404388'),
+        (0.4, '#2a788e'),
+        (0.6, '#21a784'),
+        (0.8, '#78d151'),
+        (1, '#fde624'),
+    ], N=256)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1, projection='scatter_density')
+    density = ax.scatter_density(ref, test,cmap=white_viridis, dpi=30)
+    fig.colorbar(density, label='Number of points per pixel')
+    ax.set_xlim(xlim[0], xlim[1])
+    ax.set_ylim(ylim[0], ylim[1])
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    fig.canvas.draw_idle()
+    plt.pause(0.001)
+    return fig, ax, density
 
