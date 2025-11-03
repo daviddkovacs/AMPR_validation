@@ -8,60 +8,16 @@ from scipy.stats import gaussian_kde
 import pandas as pd
 from utilities.utils import bbox, calc_surface_temperature, mpdi
 import mpl_scatter_density # adds projection='scatter_density'
-from matplotlib.colors import LinearSegmentedColormap
-
-
-white_viridis = LinearSegmentedColormap.from_list('white_viridis', [
-    (0, '#ffffff'),
-    (1e-20, '#440053'),
-    (0.2, '#404388'),
-    (0.4, '#2a788e'),
-    (0.6, '#21a784'),
-    (0.8, '#78d151'),
-    (1, '#fde624'),
-], N=256)
-
-def tri(test,ref,):
-
-    mask = np.isfinite(ref) & np.isfinite(test)
-    ref = ref[mask]
-    test = test[mask]
-
-    plt.figure(figsize=(6, 6))
-    xy = np.vstack([ref, test])
-    z = gaussian_kde(xy)(xy)
-
-    plt.figure(figsize=(6, 6))
-
-    plt.scatter(ref, test, c=z, s=20, cmap='viridis', )
-    plt.xlim([0,2])
-    plt.ylim([270,350])
-    plt.show()
-
-def scatter_density(ref,test,
-                    xlabel = None,
-                    ylabel = None,):
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1, projection='scatter_density')
-    ax.scatter_density(ref, test)
-    density = ax.scatter_density(ref, test,cmap=white_viridis, dpi=30)
-    fig.colorbar(density, label='Number of points per pixel')
-    # ax.set_xlim(0, 1.5)
-    ax.set_ylim(270, 330)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    fig.canvas.draw_idle()
-    plt.pause(0.001)
-    return fig, ax, density
+from utilities.plotting import scatter_density
 
 
 
-list = [
-        -160.0910647716093,
-        -54.47588915053829,
-        164.54418851179815,
-        67.42394397664174
-      ]
+list =[
+    -70.27302575366366,
+    -38.441971436609485,
+    -57.055616768820755,
+    -26.843915254949074
+  ]
 
 path_sat = r"G:\My Drive\Munka\CLIMERS\ER2_validation\AMSR2\passive_input\medium_resolution"
 sat_freq = '18.7'
@@ -107,7 +63,6 @@ BT = bbox(BT, list)
 BT["MPDI"] =  mpdi(BT["bt_V"], BT["bt_H"])
 
 
-
 LPRM = LPRMData(path = r"G:\My Drive\Munka\CLIMERS\ER2_validation\AMSR2\lprm_output\medium_resolution",
                date = d,
                sat_freq = sat_freq,
@@ -124,4 +79,5 @@ scatter_density(
     BT["MPDI"],
     dfKA["TSURF"],
     xlabel= "18.7 GHz MPDI",
-    ylabel="Ka T surface")
+    ylabel="Ka T surface",
+    )
