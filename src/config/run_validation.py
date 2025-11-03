@@ -1,5 +1,5 @@
 from readers.Air import AirborneData
-from readers.Sat import SatelliteData
+from readers.Sat import BTData
 from readers.ERA5 import ERA
 from main import validator, validator_all
 
@@ -33,8 +33,8 @@ if __name__ == "__main__":
     # Configure the parameters here ====================================================================================
     # Airborne (AMPR) variables
     path_air = r"/home/ddkovacs/shares/climers/Projects/CCIplus_Soil_Moisture/07_data/WHYMSIE/data_from_RichDJ"
-    air_freq = '10.7'
-    flight_direction = "WE"
+    air_freq = '37.1'
+    flight_direction = "EW"
     scan_direction = "26_50"
 
     # Satellite (AMSR2) variables
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     bio_var = "skt"
 
     # Comomn variables
-    comparison = "sat2bio" # "air2sat" or  "air2bio"
+    comparison = "air2sat" # "air2sat" or  "air2bio"
     date = "2024-10-22"
 
     single_validation = True
@@ -63,7 +63,7 @@ if __name__ == "__main__":
                               air_freq=air_freq,
                               )
 
-    AMSR2_OBS = SatelliteData(path=path_sat,
+    AMSR2_OBS = BTData(path=path_sat,
                               sat_sensor=sat_sensor,
                               date=date,
                               overpass=overpass,
@@ -72,7 +72,8 @@ if __name__ == "__main__":
                               )
     ERA_SM  = ERA(path=path_era,
                   date =date,
-                  bio_var=bio_var)
+                  bio_var="skt")
+
 
     if single_validation:
         validator(ER2_flight,

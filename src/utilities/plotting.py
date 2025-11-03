@@ -5,6 +5,7 @@ from scipy.stats import gaussian_kde
 import pandas as pd
 import numpy as np
 import os
+import mpl_scatter_density
 from matplotlib.colors import LinearSegmentedColormap
 
 
@@ -146,8 +147,8 @@ def longitude_plot(ref_x,
 def scatter_density(ref,test,
                     xlabel = None,
                     ylabel = None,
-                    xlim = None,
-                    ylim = None,):
+                    xlim = (None, None),
+                    ylim = (None, None)):
 
     white_viridis = LinearSegmentedColormap.from_list('white_viridis', [
         (0, '#ffffff'),
