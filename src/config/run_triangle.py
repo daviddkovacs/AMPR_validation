@@ -13,10 +13,10 @@ from utilities.plotting import scatter_density
 
 
 list = [
-    -0.574370881840224,
-    44.066626919592665,
-    6.291207660185506,
-    48.852072818550056
+    -69.37075582840548,
+    -42.83104542387272,
+    -65.34987628234693,
+    -39.58160037930622
   ]
 
 path_sat = r"/home/ddkovacs/shares/climers/Projects/CCIplus_Soil_Moisture/07_data/LPRM/passive_input/medium_resolution/AMSR2"
@@ -27,7 +27,7 @@ target_res = "10"
 
 
 
-datelist = pd.date_range(start='3/1/2024', end='4/1/2024')
+datelist = pd.date_range(start='10/1/2024', end='11/1/2024')
 datelist = [s.strftime("%Y-%m-%d") for s in datelist]
 
 BT_compound = pd.DataFrame({})
@@ -84,4 +84,6 @@ scatter_density(
     ref_compound["TSURF"],
     xlabel= "VOD KU",
     ylabel="TSURF",
+    xlim = (0,1.8),
+    ylim = (270,340),
     )
