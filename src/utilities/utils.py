@@ -117,6 +117,8 @@ def mpdi(v_freq,
 
 def bbox(df,
          list):
+    df_original_cols = df.columns
+    df.columns = df.columns.str.lower()
 
     df = df.loc[df["lat"] > list[1]]
     df = df.loc[df["lat"] < list[3]]
@@ -124,6 +126,7 @@ def bbox(df,
     df = df.loc[df["lon"] > list[0]]
     df = df.loc[df["lon"] < list[2]]
 
+    df.columns = df_original_cols
     return df
 
 def calc_surface_temperature(bt_Ka_input: np.ndarray) -> np.ndarray:

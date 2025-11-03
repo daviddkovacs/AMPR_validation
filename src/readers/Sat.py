@@ -79,7 +79,7 @@ class LPRMData(BTData):
 
         dataset = self.to_xarray()
         pandas = dataset.to_dataframe()
-        pandas.columns = pandas.columns.str.lower()
-        pandas = pandas.dropna(subset=['scantime'])
+        # pandas.columns = pandas.columns.str.lower()
+        pandas = pandas.dropna(subset=['VOD_C2'])
 
         return pandas

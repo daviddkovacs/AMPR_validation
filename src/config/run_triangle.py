@@ -13,10 +13,10 @@ from utilities.plotting import scatter_density
 
 
 list = [
-    43.1852028411314,
-    56.06920505072671,
-    141.24479663827634,
-    64.88951768313916
+    -0.574370881840224,
+    44.066626919592665,
+    6.291207660185506,
+    48.852072818550056
   ]
 
 path_sat = r"/home/ddkovacs/shares/climers/Projects/CCIplus_Soil_Moisture/07_data/LPRM/passive_input/medium_resolution/AMSR2"
@@ -26,11 +26,15 @@ overpass = "day"
 target_res = "10"
 
 
-datelist = pd.date_range(start='1/1/2024', end='12/31/2024')
+
+datelist = pd.date_range(start='3/1/2024', end='4/1/2024')
 datelist = [s.strftime("%Y-%m-%d") for s in datelist]
+
+BT_compound = pd.DataFrame({})
 
 ref_compound = pd.DataFrame({})
 test_compound = pd.DataFrame({})
+
 
 for d in datelist:
     KA = BTData(path = path_sat,
@@ -70,13 +74,14 @@ for d in datelist:
     LPRM = LPRM.to_pandas()
     LPRM = bbox(LPRM, list)
 
-    ref_compound = pd.concat([ref_compound,BT])
+    ref_compound = pd.concat([ref_compound,LPRM])
     test_compound = pd.concat([test_compound,dfKA])
+    print(f"{d} read")
 
 plt.ion()
 scatter_density(
-    ref_compound["bt_V"],
-    test_compound["TSURF"],
-    xlabel= "18.7 GHz MPDI",
-    ylabel="Ka T surface",
+    ref_compound["VOD_KU"],
+    ref_compound["TSURF"],
+    xlabel= "VOD KU",
+    ylabel="TSURF",
     )
