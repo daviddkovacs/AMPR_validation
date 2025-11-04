@@ -10,13 +10,11 @@ from utilities.utils import bbox, calc_surface_temperature, mpdi
 import mpl_scatter_density # adds projection='scatter_density'
 from utilities.plotting import scatter_density
 
-
-
 list = [
-    -69.37075582840548,
-    -42.83104542387272,
-    -65.34987628234693,
-    -39.58160037930622
+    -152.18927201916435,
+    -57.90255931953574,
+    170.99978303529724,
+    70.21946728379584
   ]
 
 path_sat = r"/home/ddkovacs/shares/climers/Projects/CCIplus_Soil_Moisture/07_data/LPRM/passive_input/medium_resolution/AMSR2"
@@ -26,8 +24,7 @@ overpass = "day"
 target_res = "10"
 
 
-
-datelist = pd.date_range(start='10/1/2024', end='11/1/2024')
+datelist = pd.date_range(start='6/1/2024', end='6/2/2024')
 datelist = [s.strftime("%Y-%m-%d") for s in datelist]
 
 BT_compound = pd.DataFrame({})
@@ -80,10 +77,14 @@ for d in datelist:
 
 plt.ion()
 scatter_density(
-    ref_compound["VOD_KU"],
-    ref_compound["TSURF"],
+    ref=ref_compound["VOD_KU"],
+    test=ref_compound["TSURF"],
+    test_colour=ref_compound["SM_C1"],
     xlabel= "VOD KU",
     ylabel="TSURF",
-    xlim = (0,1.8),
+    cbar_label= "SM_C1",
+    xlim = (0,1.4),
     ylim = (270,340),
+    colormin=0,
+    colormax=0.5,
     )

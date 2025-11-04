@@ -75,12 +75,17 @@ def create_scatter_plot(ref,
         plt.show()
 
 
-
-def scatter_density(ref,test,
+def scatter_density(ref,
+                    test,
+                    test_colour = None,
                     xlabel = None,
                     ylabel = None,
+                    cbar_label= "Density",
                     xlim = (None, None),
-                    ylim = (None, None)):
+                    ylim = (None, None),
+                    colormin=None,
+                    colormax=None,
+                    ):
 
     white_viridis = LinearSegmentedColormap.from_list('white_viridis', [
         (0, '#ffffff'),
@@ -94,8 +99,16 @@ def scatter_density(ref,test,
 
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1, projection='scatter_density')
-    density = ax.scatter_density(ref, test,cmap=white_viridis, dpi=30)
-    fig.colorbar(density, label='Number of points per pixel')
+    density = ax.scatter_density(ref,
+                                 test,
+                                 c=test_colour,
+                                 cmap="jet",
+                                 dpi= 50,
+                                 vmin=colormin,
+                                 vmax=colormax,
+                                 )
+
+    fig.colorbar(density, label= cbar_label)
     ax.set_xlim(xlim[0], xlim[1])
     ax.set_ylim(ylim[0], ylim[1])
     plt.xlabel(xlabel)
