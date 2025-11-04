@@ -117,16 +117,13 @@ def mpdi(v_freq,
 
 def bbox(df,
          list):
-    df_original_cols = df.columns
-    df.columns = df.columns.str.lower()
 
-    df = df.loc[df["lat"] > list[1]]
-    df = df.loc[df["lat"] < list[3]]
+    df = df.loc[df["LAT"] > list[1]]
+    df = df.loc[df["LAT"] < list[3]]
 
-    df = df.loc[df["lon"] > list[0]]
-    df = df.loc[df["lon"] < list[2]]
+    df = df.loc[df["LON"] > list[0]]
+    df = df.loc[df["LON"] < list[2]]
 
-    df.columns = df_original_cols
     return df
 
 def calc_surface_temperature(bt_Ka_input: np.ndarray) -> np.ndarray:
@@ -146,3 +143,39 @@ def calc_surface_temperature(bt_Ka_input: np.ndarray) -> np.ndarray:
     # temperature = np.where(temperature <= 274.15, np.nan, temperature)
 
     return temperature
+
+
+def find_common_coords(lprm, bt):
+    """
+    Finding common locs between two datasets. Needed to avoid dimension mismatch when plotting.
+
+    :param ref: dataframe reference
+    :param test:  dataframe test
+    :return: common dataframe
+    """
+    bt = bt[["LAT","LON", "BT_V", "BT_H", "MPDI",]]
+    lprm = lprm.drop(columns = ["SCANTIME","FLAGS"])
+    bt["LAT"] = bt["LAT"] + 0.05
+    bt["LON"] = bt["LON"] + 0.05
+
+    lprm['LAT'] = lprm['LAT'].round(4)
+    lprm['LON'] = lprm['LON'].round(4)
+    bt['LAT'] = bt['LAT'].round(4)
+    bt['LON'] = bt['LON'].round(4)
+
+    common_df = pd.merge(lprm,bt,how='inner', on = ["LON","LAT"])
+    common_df =  common_df.dropna(subset=['MPDI'])
+
+    return common_df
+
+def normalize(array):
+    """
+    normalize data between [0:1] according to Carlson (2020) "A Brief Analysis.."
+    """
+
+    minimum = array.min()
+    maximum = array.max()
+
+    scaled_array = (array - minimum) / (minimum - maximum)
+    scaled_array = np.positive(scaled_array)
+    return scaled_array

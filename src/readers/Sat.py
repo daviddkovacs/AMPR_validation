@@ -45,10 +45,12 @@ class BTData:
 
         dataset = self.to_xarray()
         pandas = dataset.to_dataframe()
-        pandas = pandas.dropna(subset=['scantime']).reset_index()
+        # pandas = pandas.dropna(subset=['scantime']).reset_index()
+        pandas = pandas.reset_index()
         pandas = pandas[["lon","lat","scantime", f"bt_{self.sat_freq}V", f"bt_{self.sat_freq}H"]]
         pandas = pandas.rename(columns={f"bt_{self.sat_freq}V": "bt_V",
                                         f"bt_{self.sat_freq}H": "bt_H",})
+        pandas.columns = pandas.columns.str.upper()
         return pandas
 
 
@@ -79,7 +81,7 @@ class LPRMData(BTData):
 
         dataset = self.to_xarray()
         pandas = dataset.to_dataframe()
-        # pandas.columns = pandas.columns.str.lower()
-        pandas = pandas.dropna(subset=['VOD_C2'])
+        pandas = pandas.reset_index(drop=True)
+        # pandas = pandas.dropna(subset=['VOD_C2'])
 
         return pandas

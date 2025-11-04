@@ -77,13 +77,13 @@ def create_scatter_plot(ref,
 
 def scatter_density(ref,
                     test,
-                    test_colour = None,
-                    xlabel = None,
-                    ylabel = None,
-                    cbar_label= "Density",
-                    cbar_type= None,
-                    xlim = (None, None),
-                    ylim = (None, None),
+                    test_colour=None,
+                    xlabel=None,
+                    ylabel=None,
+                    cbar_label="Density",
+                    cbar_type=None,
+                    xlim=(None, None),
+                    ylim=(None, None),
                     cbar_scale=(None, None),
                     ):
 
@@ -100,13 +100,16 @@ def scatter_density(ref,
     if cbar_type is None:
         cbar_type = white_viridis
 
+    # fig = plt.figure(dpi=300, figsize=(6, 4))
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1, projection='scatter_density')
+    # fig.set_size_inches(4, 3, forward=True)
+
     density = ax.scatter_density(ref,
                                  test,
                                  c=test_colour,
-                                 cmap= cbar_type,
-                                 dpi= 50,
+                                 cmap=cbar_type,
+                                 dpi=50,
                                  vmin=cbar_scale[0],
                                  vmax=cbar_scale[1],
                                  )
