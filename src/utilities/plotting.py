@@ -85,6 +85,7 @@ def scatter_density(ref,
                     xlim=(None, None),
                     ylim=(None, None),
                     cbar_scale=(None, None),
+                    dpi = 30
                     ):
 
     white_viridis = LinearSegmentedColormap.from_list('white_viridis', [
@@ -109,7 +110,7 @@ def scatter_density(ref,
                                  test,
                                  c=test_colour,
                                  cmap=cbar_type,
-                                 dpi=50,
+                                 dpi=30,
                                  vmin=cbar_scale[0],
                                  vmax=cbar_scale[1],
                                  )
