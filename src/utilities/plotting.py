@@ -171,11 +171,11 @@ def create_longitude_plot(ref_x,
 
     ax2 = ax1.twinx()
     ax2.plot(test2_x, test2_y,
-             label=f"ERA5 {bio_var}",
+             label=f"{bio_var}",
              color="tab:brown",
              linestyle='--',
              markersize=2)
-    ax2.set_ylabel(f"ERA5 {bio_var}")
+    ax2.set_ylabel(f"{bio_var}")
 
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()

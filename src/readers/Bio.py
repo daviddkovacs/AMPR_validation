@@ -37,7 +37,7 @@ class Bio:
     def to_pandas(self, bbox=None):
 
         if bbox is None:
-            bbox = list([-125.203, 27.896, -82.213, 43.518])
+            bbox = list([-120.66213,32.3257314,-88.03080,41.79186])
 
         dataset = self.to_xarray(bbox)
         pandas = dataset.to_dataframe()
@@ -72,6 +72,7 @@ class CLMS(Bio):
 
     def __init__(self, path, date, bio_var,):
 
+        bio_var = bio_var.upper()
         if (date == "2024-10-22" or date == '2024-10-25'):
             _date = "20241020"
         elif date == '2024-10-31':

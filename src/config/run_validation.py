@@ -33,13 +33,13 @@ if __name__ == "__main__":
     # Configure the parameters here ====================================================================================
     # Airborne (AMPR) variables
     path_air = r"/home/ddkovacs/shares/climers/Projects/CCIplus_Soil_Moisture/07_data/WHYMSIE/data_from_RichDJ"
-    air_freq =  '37.1'
+    air_freq =  '19.35'
     flight_direction = "WE"
     scan_direction = "26_50"
 
     # Satellite (AMSR2) variables
     path_sat = r"/home/ddkovacs/shares/climers/Projects/CCIplus_Soil_Moisture/07_data/LPRM/passive_input/medium_resolution/AMSR2"
-    sat_freq = '36.5'
+    sat_freq = '18.7'
     sat_sensor = "amsr2"
     overpass = "day"
     target_res = "10"
@@ -50,7 +50,7 @@ if __name__ == "__main__":
 
     #CLMS variables
     path_clms =  "/home/ddkovacs/shares/climers/Projects/CCIplus_Soil_Moisture/07_data/WHYMSIE/ancillary_data/CLMS"
-    clms_var = "LAI"
+    clms_var = "FCOVER"
 
     # Comomn variables
     comparison = "air2sat" # "air2sat" or  "air2bio"
