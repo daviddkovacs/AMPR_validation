@@ -14,6 +14,7 @@ from utilities.utils import (bbox,
                              normalize)
 import mpl_scatter_density # adds projection='scatter_density'
 from utilities.plotting import scatter_density
+from config.paths import path_lprm, path_bt
 
 list =   [
     -9.808900000340572,
@@ -24,7 +25,8 @@ list =   [
 
 # Frequencies(AMSR2):
 AMSR2_bands = ['6.9', '7.3', '10.7', '18.7', '23.8', '36.5', '89.0']
-path_sat = r"/home/ddkovacs/shares/climers/Projects/CCIplus_Soil_Moisture/07_data/LPRM/passive_input/medium_resolution/AMSR2"
+_path_bt = path_bt
+_path_lprm = path_lprm
 sat_freq = '10.7'
 sat_sensor = "amsr2"
 overpass = "day"
@@ -42,7 +44,7 @@ test_compound = pd.DataFrame({})
 
 for d in datelist:
 
-    BT = BTData(path = path_sat,
+    BT = BTData(path = _path_bt,
                    date = d,
                    sat_freq = sat_freq,
                    overpass = overpass,
@@ -56,7 +58,7 @@ for d in datelist:
     BT["MPDI"] =  mpdi(BT["BT_V"], BT["BT_H"])
 
 
-    LPRM = LPRMData(path = r"/home/ddkovacs/shares/climers/Projects/CCIplus_Soil_Moisture/07_data/LPRM/lprm_output/medium_resolution/AMSR2",
+    LPRM = LPRMData(path =_path_lprm,
                    date = d,
                    sat_freq = sat_freq,
                    overpass = overpass,
