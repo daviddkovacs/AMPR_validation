@@ -1,8 +1,7 @@
 from readers.Air import AirborneData
 from readers.Sat import BTData
-from readers.ERA5 import ERA
+from readers.Bio import Bio, CLMS
 from main import Plotter
-from utilities.plotting import create_longitude_plot
 
 if __name__ == "__main__":
     """
@@ -34,13 +33,13 @@ if __name__ == "__main__":
     # Configure the parameters here ====================================================================================
     # Airborne (AMPR) variables
     path_air = r"/home/ddkovacs/shares/climers/Projects/CCIplus_Soil_Moisture/07_data/WHYMSIE/data_from_RichDJ"
-    air_freq = '19.35'
+    air_freq =  '37.1'
     flight_direction = "WE"
     scan_direction = "26_50"
 
     # Satellite (AMSR2) variables
     path_sat = r"/home/ddkovacs/shares/climers/Projects/CCIplus_Soil_Moisture/07_data/LPRM/passive_input/medium_resolution/AMSR2"
-    sat_freq = '18.7'
+    sat_freq = '36.5'
     sat_sensor = "amsr2"
     overpass = "day"
     target_res = "10"
@@ -48,6 +47,10 @@ if __name__ == "__main__":
     # ERA 5 variables
     path_era = "/home/ddkovacs/shares/climers/Datapool/ECMWF_reanalysis/01_raw/ERA5-Land/datasets/images"
     bio_var = "skt"
+
+    #CLMS variables
+    path_clms =  "/home/ddkovacs/shares/climers/Projects/CCIplus_Soil_Moisture/07_data/WHYMSIE/ancillary_data/CLMS"
+    clms_var = "LAI"
 
     # Comomn variables
     comparison = "air2sat" # "air2sat" or  "air2bio"
@@ -71,14 +74,24 @@ if __name__ == "__main__":
                               target_res=target_res,
                               sat_freq=sat_freq,
                               )
-    ERA_SM  = ERA(path=path_era,
+    ERA_SM  = Bio(path=path_era,
                   date =date,
                   bio_var=bio_var)
+
+    CLMS_VEG = CLMS(path = path_clms,
+                    bio_var=clms_var,
+                    date=date)
+
+    era_pd = ERA_SM.to_pandas()
+    clms_pd = CLMS_VEG.to_pandas()
+
 
     p = Plotter(ER2_flight,
                 AMSR2_OBS,
                 ERA_SM,
                 )
+
+    combined_data = p.get_data()
 
     if single_validation:
         p.scatterplot(comparison="air2bio")

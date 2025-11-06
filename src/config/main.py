@@ -1,9 +1,11 @@
+from partd.utils import suffix
+
 from utilities.utils import mpdi, collocate_datasets
 from utilities.plotting import create_scatter_plot, create_longitude_plot
 from readers.Air import AirborneData
 from readers.Sat import BTData
 from utilities.plotting import scatter_density
-from readers.ERA5 import ERA
+from readers.Bio import Bio
 
 import pandas as pd
 
@@ -25,7 +27,6 @@ class Plotter:
 
         self.sat_sensor = test_obj.sat_sensor
         self.sat_freq = test_obj.sat_freq
-        self.target_res = test_obj.target_res
         self.target_res = test_obj.target_res
 
         if bio_obj:
@@ -69,7 +70,7 @@ class Plotter:
         ref_nn, test_nn = collocate_datasets(self.ref_pd, self.test_pd)
         test_nn["MPDI"] = mpdi(test_nn["bt_V"], test_nn["bt_H"])
 
-        ref_nn2bio, test_nnbio = collocate_datasets(self.ref_pd, self.bio_pd)
+        ref_nn2bio, bio_nn = collocate_datasets(self.ref_pd, self.bio_pd)
 
         kwargs_dict= {
             "sat_freq" : self.sat_freq,
@@ -85,8 +86,8 @@ class Plotter:
                               self.ref_pd["MPDI"],
                               test_nn["lon"],
                               test_nn["MPDI"],
-                              test_nnbio["lon"],
-                              test_nnbio[self.bio_var],
+                              bio_nn["lon"],
+                              bio_nn[self.bio_var],
                               **kwargs_dict
                               )
 
@@ -122,7 +123,7 @@ class Plotter:
                                               sat_freq=self.test_obj.sat_freq,
                                               ).to_pandas()
 
-                    bio_pd = ERA(path=self.bio_obj.path,
+                    bio_pd = Bio(path=self.bio_obj.path,
                                  date=d,
                                  bio_var=self.bio_obj.bio_var).to_pandas()
 
@@ -140,7 +141,7 @@ class Plotter:
                         stat_text = True
 
                     if comparison == "air2bio":
-                        # Airborne to ERA 5
+                        # Airborne to Bio 5
                         ref_nn, test_nn = collocate_datasets(air_pd, bio_pd)
                         ref_compound = pd.concat([ref_compound, ref_nn])
                         test_compound = pd.concat([test_compound, test_nn])
@@ -154,3 +155,21 @@ class Plotter:
 
         create_scatter_plot(ref_compound[ref_var], test_compound[test_var], xlabel=xlabel,
                             ylabel=ylabel, stat_text = stat_text)
+
+    def get_data(self):
+
+        ref_nn, test_nn = collocate_datasets(self.ref_pd, self.test_pd)
+        test_nn["MPDI"] = mpdi(test_nn["bt_V"], test_nn["bt_H"])
+
+        ref_nn2bio, bio_nn = collocate_datasets(self.ref_pd, self.bio_pd)
+
+        _combined = ref_nn.join(test_nn, lsuffix = "_ref", rsuffix = "_test")
+        combined = _combined.join(bio_nn.add_suffix("_bio"), rsuffix = "_bio")
+
+        return combined
+
+
+
+
+
+

@@ -94,6 +94,9 @@ def collocate_datasets(ref_obj,
     ref_nn = ref_obj.iloc[filtered_nearest_locs["index_ref"]].reset_index(drop=True)
     test_nn = test_obj.iloc[filtered_nearest_locs["index_nn"]].reset_index(drop=True)
 
+    ref_nn = ref_nn.drop(columns = ["rad_lon","rad_lat"])
+    test_nn = test_nn.drop(columns = ["rad_lon","rad_lat"])
+
     return ref_nn, test_nn
 
 

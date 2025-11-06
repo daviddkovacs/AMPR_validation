@@ -50,7 +50,7 @@ class BTData:
         pandas = pandas[["lon","lat","scantime", f"bt_{self.sat_freq}V", f"bt_{self.sat_freq}H"]]
         pandas = pandas.rename(columns={f"bt_{self.sat_freq}V": "bt_V",
                                         f"bt_{self.sat_freq}H": "bt_H",})
-        pandas.columns = pandas.columns.str.upper()
+        # pandas.columns = pandas.columns.str.upper()
         return pandas
 
 
