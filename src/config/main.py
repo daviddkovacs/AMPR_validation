@@ -54,15 +54,15 @@ class Plotter:
             ref_var = "MPDI"
             test_var = self.bio_var
             xlabel = f"AMPR MPDI {self.air_freq} GHz"
-            ylabel = f"ERA5 {self.bio_var}"
+            ylabel = f"{self.bio_var}"
             stat_text  = False
 
         create_scatter_plot(ref_nn[ref_var], test_nn[test_var], xlabel=xlabel, ylabel=ylabel, stat_text = stat_text)
 
-    # scatter_density(ref_nn[plot_var],
-    #              test_nn[plot_var],
-    #              xlabel=xlabel,
-    #              ylabel=ylabel)
+        # scatter_density(ref_nn[ref_var],
+        #                 test_nn[test_var],
+        #              xlabel=xlabel,
+        #              ylabel=ylabel)
 
 
     def longitude_plot(self):
@@ -149,7 +149,7 @@ class Plotter:
                         ref_var = "MPDI"
                         test_var = self.bio_var
                         xlabel = f"AMPR MPDI {self.air_freq} GHz"
-                        ylabel = f"ERA5 {self.bio_var}"
+                        ylabel = f"{self.bio_var}"
                         stat_text = False
 
 

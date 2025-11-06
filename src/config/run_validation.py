@@ -88,7 +88,7 @@ if __name__ == "__main__":
 
     p = Plotter(ER2_flight,
                 AMSR2_OBS,
-                ERA_SM,
+                CLMS_VEG,
                 )
 
     combined_data = p.get_data()
