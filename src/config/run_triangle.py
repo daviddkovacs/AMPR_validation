@@ -13,21 +13,21 @@ from utilities.utils import (bbox,
                              find_common_coords,
                              normalize)
 import mpl_scatter_density
-from utilities.plotting import scatter_density
+from utilities.plotting import scatter_density,create_scatter_plot
 from config.paths import path_lprm, path_bt
 
-list =   [
-    -9.808900000340572,
-    34.73583206243012,
-    26.713989828239306,
-    58.97591997737254
+list =    [
+    -11.045660201938631,
+    36.132044809514,
+    31.33353543860065,
+    59.484742106301525
   ]
 
 # Frequencies(AMSR2):
 AMSR2_bands = ['6.9', '7.3', '10.7', '18.7', '23.8', '36.5', '89.0']
 _path_bt = path_bt
 _path_lprm = path_lprm
-sat_freq = '10.7'
+sat_freq = '18.7'
 sat_sensor = "amsr2"
 overpass = "day"
 target_res = "10"
@@ -78,6 +78,9 @@ common_data = find_common_coords(ref_compound,test_compound)
 # common_data["VOD_C1_s"] = normalize(common_data["VOD_C1"])
 # common_data["TSURF_s"] = normalize(common_data["TSURF"])
 
+common_data = common_data.loc[common_data["VOD_KU"] > 0.5]
+common_data = common_data.loc[common_data["VOD_KU"] < 0.55]
+
 scatter_density(
     ref=common_data["VOD_KU"],
     test=common_data["TSURF"],
@@ -85,9 +88,22 @@ scatter_density(
     xlabel= "VOD_KU",
     ylabel="TSURF",
     cbar_label= "SM_C1",
-    cbar_type = "jet",
+    # cbar_type = "jet",
+    # xlim = (0,1.4),
+    # ylim = (270,320),
+    # cbar_scale = (0,0.5),
+    dpi =5
+    )
+
+create_scatter_plot(
+    ref=common_data["VOD_KU"],
+    test=common_data["TSURF"],
+    test_colour=common_data["SM_C1"],
+    xlabel= "VOD_KU",
+    ylabel="TSURF",
+    cbar_label= "SM_C1",
     xlim = (0,1.4),
-    ylim = (270,340),
+    ylim = (270,320),
     cbar_scale = (0,0.5),
-    # dpi =50
+    dpi =50
     )

@@ -30,47 +30,54 @@ def statistics(ref,test):
 
 def create_scatter_plot(ref,
                  test,
-                 xlabel = "",
-                 ylabel = "",
-                 xmin_val=None,
-                 xmax_val= None,
-                 ymin_val = None,
-                 ymax_val = None,
+                        test_colour=None,
+                 xlabel = None,
+                 ylabel = None,
+                        cbar_label="Density",
+                        xlim=(None, None),
+                ylim=(None, None),
                  stat_text = True,
                  showfig = True,
                         ):
 
 
     mask = np.isfinite(ref) & np.isfinite(test)
+    if test_colour is not None:
+        mask &= np.isfinite(test_colour)
+
     ref = ref[mask]
     test = test[mask]
+    test2 = test_colour[mask] if test_colour is not None else None
 
-    xy = np.vstack([ref, test])
-    z = gaussian_kde(xy)(xy)
+    if test2 is None:
+        xy = np.vstack([ref, test])
+        z = gaussian_kde(xy)(xy)
+    else:
+        z = test2
 
     plt.figure(figsize=(6, 6))
+    sc = plt.scatter(ref, test, c=z, s=20, cmap='viridis')
 
-    plt.scatter(ref, test, c=z, s=20, cmap='viridis', )
-
-    plt.plot([xmin_val, xmax_val], [ymin_val, ymax_val], 'k-', lw=1, )
+    # 1:1 line
+    plt.plot([xlim[0], xlim[1]], [ylim[0], ylim[1]], 'k-', lw=1)
 
     if stat_text:
         stats_dict = statistics(ref, test)
-
         stats_text = (f"R: {stats_dict['r']}\nRMSE: {stats_dict['rmse']}\n"
                       f"Bias: {stats_dict['bias']}\n"
                       f"Precision: {stats_dict['precision']}\n"
                       f"N: {stats_dict['N']}\n")
-
         plt.text(0.05, 0.95, stats_text, transform=plt.gca().transAxes,
                  verticalalignment='top', horizontalalignment='left', fontsize=14)
 
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.grid(False)
-    plt.xlim([xmin_val, xmax_val])
-    plt.ylim([ymin_val, ymax_val])
+    plt.xlim([xlim[0], xlim[1]])
+    plt.ylim([ylim[0], ylim[1]])
+    plt.colorbar(sc, label=cbar_label)
     plt.tight_layout()
+
     if showfig:
         plt.show()
 

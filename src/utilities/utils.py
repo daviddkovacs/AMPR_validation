@@ -167,7 +167,7 @@ def find_common_coords(lprm, bt):
     bt['LON'] = bt['LON'].round(4)
 
     common_df = pd.merge(lprm,bt,how='inner', on = ["LON","LAT"])
-    common_df =  common_df.dropna(subset=['TSURF'])
+    common_df =  common_df.dropna(subset=['BT_V',"TSURF"])
 
     return common_df
 
