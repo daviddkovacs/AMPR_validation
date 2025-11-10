@@ -16,11 +16,11 @@ import mpl_scatter_density
 from utilities.plotting import scatter_density,create_scatter_plot
 from config.paths import path_lprm, path_bt
 
-list =    [
-    -11.045660201938631,
-    36.132044809514,
-    31.33353543860065,
-    59.484742106301525
+list = [
+    37.95255268735875,
+    46.88716671135515,
+    51.34601775486945,
+    53.696521340194664
   ]
 
 # Frequencies(AMSR2):
@@ -32,8 +32,8 @@ sat_sensor = "amsr2"
 overpass = "day"
 target_res = "10"
 
-composite_start = "2024-10-01"
-composite_end = "2024-10-04"
+composite_start = "2024-07-01"
+composite_end = "2024-07-02"
 
 datelist = pd.date_range(start=composite_start, end=composite_end)
 datelist = [s.strftime("%Y-%m-%d") for s in datelist]
@@ -69,42 +69,39 @@ for d in datelist:
     LPRM = LPRM.to_pandas()
     LPRM = bbox(LPRM, list)
 
-    ref_compound = pd.concat([ref_compound,LPRM])
-    test_compound = pd.concat([test_compound,BT])
+    # ref_compound = pd.concat([ref_compound,LPRM])
+    # test_compound = pd.concat([test_compound,BT])
     print(f"{d} read")
 
-plt.ion()
-common_data = find_common_coords(ref_compound,test_compound)
+    plt.ion()
+    common_data = find_common_coords(LPRM,BT)
 
-common_data = common_data.loc[common_data["VOD_KU"] > 0.5]
-common_data = common_data.loc[common_data["VOD_KU"] < 0.55]
+# common_data = common_data.loc[common_data["VOD_KU"] > 0.5]
+# common_data = common_data.loc[common_data["VOD_KU"] < 0.55]
 
-# common_data = common_data.loc[common_data["TSURF"] < 300]
-# common_data = common_data.loc[common_data["TSURF"] > 290]
+    scatter_density(
+        ref=common_data["VOD_KU"],
+        test=common_data["TSURF"],
+        test_colour=common_data["SM_C1"],
+        xlabel= "VOD_KU",
+        ylabel="TSURF",
+        cbar_label= "SM_C1",
+        # cbar_type = "jet",
+        # xlim = (0,1.4),
+        # ylim = (270,320),
+        # cbar_scale = (0,0.5),
+        # dpi =5
+        )
 
-# scatter_density(
+# create_scatter_plot(
 #     ref=common_data["VOD_KU"],
 #     test=common_data["TSURF"],
-#     test_colour=common_data["SM_C1"],
+#     # test_colour=common_data["SM_C1"],
 #     xlabel= "VOD_KU",
 #     ylabel="TSURF",
-#     cbar_label= "SM_C1",
-#     # cbar_type = "jet",
+#     # cbar_label= "SM_C1",
 #     # xlim = (0,1.4),
 #     # ylim = (270,320),
-#     # cbar_scale = (0,0.5),
-#     dpi =5
+#     # cbar_scale = (250,280),
+#     stat_text=False
 #     )
-
-create_scatter_plot(
-    ref=common_data["BT_H"],
-    test=common_data["SM_C1"],
-    # test_colour=common_data["BT_H"],
-    xlabel= "BT_H",
-    ylabel="SM_C1",
-    # cbar_label= "BT_H",
-    # xlim = (0,1.4),
-    # ylim = (270,320),
-    # cbar_scale = (0,0.5),
-    stat_text=False
-    )
