@@ -182,3 +182,49 @@ def normalize(array):
     scaled_array = (array - minimum) / (maximum -minimum )
     scaled_array = np.positive(scaled_array)
     return scaled_array
+
+
+def extreme_hull_vals(x_values,
+                      y_values,
+                      x_variable = "VOD_KU",
+                      y_variable = "TSURF"):
+
+    hull_df = pd.DataFrame({
+        x_variable: x_values,
+        y_variable: y_values
+    })
+
+    min_x = hull_df.loc[hull_df.loc[hull_df[x_variable] == hull_df[x_variable].min(), y_variable].idxmin()].values
+    max_x = hull_df.loc[hull_df.loc[hull_df[x_variable] == hull_df[x_variable].max(), y_variable].idxmin()].values
+
+    min_y = hull_df.loc[hull_df.loc[hull_df[y_variable] == hull_df[y_variable].min(), x_variable].idxmin()].values
+    max_y = hull_df.loc[hull_df.loc[hull_df[y_variable] == hull_df[y_variable].max(), x_variable].idxmin()].values
+
+    vertex_dict = {
+        f"min_{x_variable}" : min_x,
+        f"max_{x_variable}" : max_x,
+        f"min_{y_variable}" : min_y,
+        f"max_{y_variable}" : max_y,
+                  }
+
+    return vertex_dict
+
+def soil_canopy_temperatures(point_x,point_y,
+                             cold_edge,
+                             grad_warm_edge,
+                             intercept_warm_edge,
+                             full_veg_cover
+                             ):
+
+    a = point_y - cold_edge
+    b = (grad_warm_edge * point_x + intercept_warm_edge) - point_y
+
+    A = cold_edge
+    D = intercept_warm_edge
+    T_soil = ((a / (a+b)) * (D - A) + A)
+
+    B = cold_edge
+    C = (grad_warm_edge * full_veg_cover + intercept_warm_edge)
+    T_canopy = ((a / (a + b)) * (C -B ) + B)
+
+    return T_soil, T_canopy

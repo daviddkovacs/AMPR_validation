@@ -7,18 +7,19 @@ from scipy.spatial import ConvexHull, convex_hull_plot_2d
 from shapely.geometry import Polygon
 import pandas as pd
 from utilities.utils import (bbox,
-                             calc_surface_temperature,
+                             soil_canopy_temperatures,
                              mpdi,
+                             extreme_hull_vals,
                              find_common_coords,
                              normalize)
 from utilities.plotting import scatter_density,create_scatter_plot
 from config.paths import path_lprm, path_bt
 
-list = [
-    15.994136037972424,
-    -35.360461201356685,
-    21.72850838774957,
-    67.15457444431928
+list =  [
+    15.975491129711514,
+    -33.34587460190708,
+    20.811738889215945,
+    68.07067886548683
   ]
 
 # Frequencies(AMSR2):
@@ -30,8 +31,8 @@ sat_sensor = "amsr2"
 overpass = "day"
 target_res = "10"
 
-composite_start = "2024-01-01"
-composite_end = "2024-02-01"
+composite_start = "2024-10-01"
+composite_end = "2024-11-01"
 
 datelist = pd.date_range(start=composite_start, end=composite_end, freq="ME")
 datelist = [s.strftime("%Y-%m-%d") for s in datelist]
@@ -82,13 +83,13 @@ for d in datelist:
     scatter_density(
         ref=x,
         test=y,
-        test_colour=common_data["SCANTIME_LPRM"],
+        test_colour=common_data["SM_C1"],
         xlabel= x_var,
         ylabel=y_var,
-        cbar_label= "SCANTIME_LPRM",
+        cbar_label= "SM_C1",
         # cbar_type = "jet",
         xlim = (0,1.4),
-        ylim = (273,320),
+        ylim = (273,330),
         # cbar_scale = (0,0.5),
         # dpi =5
         )
@@ -101,18 +102,48 @@ for d in datelist:
     points = np.array([_x,_y]).T
     hull = ConvexHull(points, )
 
-    hull_df = pd.DataFrame({x_var : points[hull.vertices,0],
-                            y_var : points[hull.vertices,1]})
-
-    min_x = hull_df.loc[hull_df[x_var] == hull_df[x_var].min()]
-    max_x = hull_df.loc[hull_df[x_var] == hull_df[x_var].max()]
-
-    min_y = hull_df.loc[hull_df[y_var] == hull_df[y_var].min()]
-    max_y = hull_df.loc[hull_df[y_var] == hull_df[y_var].max()]
+    vertices = extreme_hull_vals(points[hull.vertices, 0],
+                                 points[hull.vertices, 1],
+                                 x_variable= x_var,
+                                 y_variable= y_var, )
 
     plt.plot(points[hull.vertices, 0], points[hull.vertices, 1], 'r--', lw=2)
-    plt.plot(min_x,max_x,min_y,max_y, 'ro')
+
+    # plt.scatter(vertices[:,0],
+    #             vertices[:,1],
+    #             color = "b")
+
     plt.show()
+
+    # Gradient of warm edge (y2-y1) / (x2-x1)
+    grad_warm_edge = ((vertices[f"max_{y_var}"][1] - vertices[f"max_{x_var}"][1]) /
+                 (vertices[f"max_{y_var}"][0] - vertices[f"max_{x_var}"][0]))
+
+    # Intercept of warm edge on y-axis
+    intercept_warm_edge = ((grad_warm_edge * vertices[f"max_{x_var}"][0]) * -1) + vertices[f"max_{x_var}"][1]
+    plt.plot(x, grad_warm_edge * x + intercept_warm_edge, label = "Warm edge")
+
+    # Cold edge
+    cold_edge = vertices[f"min_{y_var}"][1]
+    plt.axhline(cold_edge)
+
+    # full vegetation cover edge
+    full_veg_cover = vertices[f"max_{x_var}"][0]
+    plt.axvline(full_veg_cover)
+
+
+    # Arbitrary point P
+    p = [0.6, 300] # x and y coords
+
+    T_soil, T_canopy = soil_canopy_temperatures(p[0],
+                                                p[1],
+                                                cold_edge,
+                                                grad_warm_edge,
+                                                intercept_warm_edge,
+                                                full_veg_cover
+                                                )
+
+
 
 # create_scatter_plot(
 #     ref=common_data["VOD_KU"],
