@@ -55,16 +55,15 @@ def dummy_line(gradient, intercept):
     return p_0, p_5
 
 
-def interceptor(polyX, polyY, p_0, p_5,):
-    x_o = 0
-    x_5 = 5
+def interceptor(poly, p_0, p_5,):
 
-    poly = Polygon((x,y) for x,y in zip(polyX, polyY))
     line = LineString([(0,p_0) ,(5, p_5)])
 
     intersection = poly.intersection(line)
+    t_soil = list(intersection.coords)[0][1]
+    t_canopy = list(intersection.coords)[1][1]
 
-    return intersection
+    return t_soil, t_canopy
 
 
 for d in datelist:
@@ -173,9 +172,12 @@ for d in datelist:
 
     hull_x = points[hull.vertices, 0]
     hull_y = points[hull.vertices, 1]
+    poly = Polygon((x, y) for x, y in zip(hull_x, hull_y))
 
-    point_cloud["intersection_hull"] = list(map(lambda p: interceptor(hull_x, hull_y, p[0], p[1]),
-                                                     zip(point_cloud["p_o"], point_cloud["p_5"])))
+    results = list(map(lambda p: interceptor(poly=poly, p_0 = p[0], p_5 = p[1]),
+                       zip(point_cloud["p_o"], point_cloud["p_5"])))
+
+    point_cloud["T_soil_hull"], point_cloud["T_canopy_hull"] = zip(*results)
 
 
 
