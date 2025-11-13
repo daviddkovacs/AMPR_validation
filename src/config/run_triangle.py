@@ -16,10 +16,10 @@ from utilities.plotting import scatter_density,create_scatter_plot
 from config.paths import path_lprm, path_bt
 
 list = [
-    -120.1714086676526,
-    35.70104219505507,
-    125.27052940556717,
-    40.98135188828232
+    2.0853333672618533,
+    37.026285666282135,
+    35.01083101125408,
+    61.54570598141325
   ]
 
 # Frequencies(AMSR2):
@@ -42,14 +42,15 @@ test_compound = pd.DataFrame({})
 
 def checkIntersection2(polyX, polyY, gradient, intercept):
 
-    linePtX = np.linspace(0, 5, 10000)
+    linePtX = np.linspace(0, 5, 1000)
     linePtY = gradient * linePtX + intercept
 
     poly = LineString([(x, y) for x, y in zip(polyX, polyY)])
     line = LineString([(x, y) for x, y in zip(linePtX, linePtY)])
     intPoints = poly.intersection(line)
-    points = [p for p in intPoints.geoms]
-    return points
+
+    _points = [p for p in intPoints.geoms]
+    return _points
 
 for d in datelist:
 
@@ -122,11 +123,6 @@ for d in datelist:
                                  y_variable= y_var, )
     plt.plot(points[hull.vertices, 0], points[hull.vertices, 1], 'r--', lw=2)
 
-    # plt.scatter(vertices[:,0],
-    #             vertices[:,1],
-    #             color = "b")
-
-
     # Gradient of warm edge (y2-y1) / (x2-x1)
     grad_warm_edge = ((vertices[f"max_{y_var}"][1] - vertices[f"max_{x_var}"][1]) /
                  (vertices[f"max_{y_var}"][0] - vertices[f"max_{x_var}"][0]))
@@ -143,48 +139,67 @@ for d in datelist:
     full_veg_cover = vertices[f"max_{x_var}"][0]
     plt.axvline(full_veg_cover)
 
-    points =  checkIntersection2(points[hull.vertices, 0],points[hull.vertices, 1],
-                                 grad_warm_edge,intercept_warm_edge)
-
-    point_cloud["T_SOIL"], point_cloud["T_CANOPY"] = soil_canopy_temperatures(_x,
+    temperatures_data = soil_canopy_temperatures(_x,
                                                 _y,
                                                 cold_edge,
                                                 grad_warm_edge,
                                                 intercept_warm_edge,
                                                 full_veg_cover
                                                 )
-    arb = [0.6, 287]
-    arb_ts, arb_tc = soil_canopy_temperatures(arb[0],
+    point_cloud["T_SOIL"] = temperatures_data["T_soil_extreme"]
+    point_cloud["T_CANOPY"] = temperatures_data["T_canopy_extreme"]
+
+    gradient_of_point = temperatures_data["gradient_of_point"]
+    intercept_of_point = temperatures_data["intercept_of_point"]
+
+    # intersection_hull =  checkIntersection2(points[hull.vertices, 0],points[hull.vertices, 1],
+    #                              gradient_of_point,intercept_of_point)
+
+    arb = [0.3, 280]
+    arb_temps = soil_canopy_temperatures(arb[0],
                                                 arb[1],
                                                 cold_edge,
                                                 grad_warm_edge,
                                                 intercept_warm_edge,
                                                 full_veg_cover
                                                 )
+
+    arb_grad = arb_temps["gradient_of_point"]
+    arb_intercept = arb_temps["intercept_of_point"]
+
+    arb_intersection_hull =  checkIntersection2(
+        points[hull.vertices, 0],
+        points[hull.vertices, 1],
+        arb_grad,
+        arb_intercept)
+
+    arb_ts =  (arb_intersection_hull[0].x, arb_intersection_hull[0].y)
+    arb_tc =  (arb_intersection_hull[1].x, arb_intersection_hull[1].y)
+
     print(arb_ts,arb_tc)
     plt.plot(arb[0], arb[1], marker = "D", color  ="r")
-    plt.plot(full_veg_cover, arb_tc, marker="D", color="r")
-    plt.plot(0, arb_ts, marker="D", color="r")
-    plt.plot(0, arb_ts, marker="D", color="r")
+    plt.plot(arb_ts[0], arb_ts[1], marker="D", color="r")
+    plt.plot(arb_tc[0], arb_tc[1], marker="D", color="r")
+
 
     cordinates = [point_cloud["LAT"].values , point_cloud["LON"].values]
     mi_array = zip(*cordinates)
     point_cloud.index = pd.MultiIndex.from_tuples(mi_array, names=["LAT", "LON"])
 
-    ds_point_cloud = point_cloud.to_xarray()
+    variables = ["T_SOIL", "T_CANOPY", "TSURF","SM_C1"]
+    cbar_lut = {"T_SOIL": (270, 330),
+                 "T_CANOPY" : (270, 330),
+                 "TSURF" : (270, 330),
+                 "SM_C1" : (0, 0.5),
+                 }
 
-    variables = ["T_SOIL", "T_CANOPY", "TSURF"]
-    vmin, vmax = 270, 330
-
-    fig, axes = plt.subplots(3, 1, figsize=(15, 5))
-
+    fig, axes = plt.subplots(2, 2, figsize=(8, 8))
+    axes = axes.flatten()
     for ax, var in zip(axes, variables):
-        data = ds_point_cloud[var]
-        im = ax.imshow(np.flipud(data), vmin=vmin, vmax=vmax)
+        data = point_cloud.to_xarray()[var]
+        im = ax.imshow(np.flipud(data), vmin=cbar_lut[var][0], vmax=cbar_lut[var][1])
         ax.set_title(var)
-        ax.axis('off')  # optional, remove axes for cleaner look
+        ax.axis('off')
 
-    # fig.colorbar(im, ax=axes, orientation='horizontal', fraction=0.02, pad=0.04)
     plt.tight_layout()
     plt.show()
-
