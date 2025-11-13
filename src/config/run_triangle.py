@@ -15,11 +15,8 @@ from utilities.utils import (bbox,
 from utilities.plotting import scatter_density,create_scatter_plot
 from config.paths import path_lprm, path_bt
 
-list = [
-    2.0853333672618533,
-    37.026285666282135,
-    35.01083101125408,
-    61.54570598141325
+list =  [
+-180,-90,180,90
   ]
 
 # Frequencies(AMSR2):
@@ -42,8 +39,9 @@ test_compound = pd.DataFrame({})
 
 def checkIntersection2(polyX, polyY, gradient, intercept):
 
-    linePtX = np.linspace(0, 5, 1000)
-    linePtY = gradient * linePtX + intercept
+    _linePtX = np.linspace(0, 5, 1000)
+    # linePtX = np.broadcast_to(_linePtX, (len(gradient), _linePtX.shape[0]))
+    linePtY = gradient * _linePtX + intercept
 
     poly = LineString([(x, y) for x, y in zip(polyX, polyY)])
     line = LineString([(x, y) for x, y in zip(linePtX, linePtY)])
@@ -152,10 +150,10 @@ for d in datelist:
     gradient_of_point = temperatures_data["gradient_of_point"]
     intercept_of_point = temperatures_data["intercept_of_point"]
 
-    # intersection_hull =  checkIntersection2(points[hull.vertices, 0],points[hull.vertices, 1],
-    #                              gradient_of_point,intercept_of_point)
+    intersection_hull =  checkIntersection2(points[hull.vertices, 0],points[hull.vertices, 1],
+                                 gradient_of_point,intercept_of_point)
 
-    arb = [0.3, 280]
+    arb = [0.6, 300]
     arb_temps = soil_canopy_temperatures(arb[0],
                                                 arb[1],
                                                 cold_edge,
