@@ -157,7 +157,6 @@ for d in datelist:
     intercept_of_point = temperatures_data["intercept_of_point"].values
     x_vals =  np.linspace(0, 5, 2)
 
-
     intersection_hull =  checkIntersection2(points[hull.vertices, 0],
                                             points[hull.vertices, 1],
                                             x_vals,
