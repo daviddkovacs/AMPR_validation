@@ -209,13 +209,14 @@ def extreme_hull_vals(x_values,
 
     return vertex_dict
 
-def soil_canopy_temperatures(point_x,point_y,
+def soil_canopy_temperatures(point_x,
+                             point_y,
                              cold_edge,
                              grad_warm_edge,
                              intercept_warm_edge,
                              full_veg_cover
                              ):
-
+    # equation of line: Tsoil = grad_warm_edge * point_x + intercept_warm_edge
     a = point_y - cold_edge
     b = (grad_warm_edge * point_x + intercept_warm_edge) - point_y
 

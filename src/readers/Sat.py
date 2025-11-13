@@ -68,11 +68,15 @@ class BTData:
 
 
     def to_xarray(self,
-                  ):
+                  bbox= None):
 
         dataset = xr.open_dataset(self.bt_file, decode_timedelta=False)
         if "time" in dataset.dims:
             dataset = dataset.squeeze("time", drop=True)
+        if bbox:
+            lat_mask = (dataset["LAT"] >= bbox[1]) & (dataset["LAT"] <= bbox[3])
+            lon_mask = (dataset["LON"] >= bbox[0]) & (dataset["LON"] <= bbox[2])
+            dataset = dataset.where(lat_mask & lon_mask, drop=True)
 
         return dataset
 

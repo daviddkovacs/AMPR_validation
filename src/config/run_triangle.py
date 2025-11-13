@@ -4,7 +4,7 @@ import numpy as np
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 from scipy.spatial import ConvexHull, convex_hull_plot_2d
-from shapely.geometry import Polygon
+from shapely import LineString, wkt
 import pandas as pd
 from utilities.utils import (bbox,
                              soil_canopy_temperatures,
@@ -15,11 +15,11 @@ from utilities.utils import (bbox,
 from utilities.plotting import scatter_density,create_scatter_plot
 from config.paths import path_lprm, path_bt
 
-list =  [
-    15.975491129711514,
-    -33.34587460190708,
-    20.811738889215945,
-    68.07067886548683
+list = [
+    -120.1714086676526,
+    35.70104219505507,
+    125.27052940556717,
+    40.98135188828232
   ]
 
 # Frequencies(AMSR2):
@@ -31,8 +31,8 @@ sat_sensor = "amsr2"
 overpass = "day"
 target_res = "10"
 
-composite_start = "2024-10-01"
-composite_end = "2024-11-01"
+composite_start = "2024-06-01"
+composite_end = "2024-07-01"
 
 datelist = pd.date_range(start=composite_start, end=composite_end, freq="ME")
 datelist = [s.strftime("%Y-%m-%d") for s in datelist]
@@ -40,9 +40,19 @@ datelist = [s.strftime("%Y-%m-%d") for s in datelist]
 ref_compound = pd.DataFrame({})
 test_compound = pd.DataFrame({})
 
+def checkIntersection2(polyX, polyY, gradient, intercept):
+
+    linePtX = np.linspace(0, 5, 10000)
+    linePtY = gradient * linePtX + intercept
+
+    poly = LineString([(x, y) for x, y in zip(polyX, polyY)])
+    line = LineString([(x, y) for x, y in zip(linePtX, linePtY)])
+    intPoints = poly.intersection(line)
+    points = [p for p in intPoints.geoms]
+    return points
 
 for d in datelist:
-#     d = composite_end
+
     BT = BTData(path = _path_bt,
                    date = d,
                    sat_freq = sat_freq,
@@ -64,6 +74,10 @@ for d in datelist:
                    sat_sensor = sat_sensor,
                    target_res = target_res,
                    )
+
+    ds_LPRM = LPRM.to_xarray(bbox=list)
+    ds_LPRM = ds_LPRM.assign_coords({"lon": ds_LPRM["LON"],
+                                     "lat": ds_LPRM["LAT"]})
 
     LPRM = LPRM.to_pandas()
     LPRM = bbox(LPRM, list)
@@ -106,14 +120,12 @@ for d in datelist:
                                  points[hull.vertices, 1],
                                  x_variable= x_var,
                                  y_variable= y_var, )
-
     plt.plot(points[hull.vertices, 0], points[hull.vertices, 1], 'r--', lw=2)
 
     # plt.scatter(vertices[:,0],
     #             vertices[:,1],
     #             color = "b")
 
-    plt.show()
 
     # Gradient of warm edge (y2-y1) / (x2-x1)
     grad_warm_edge = ((vertices[f"max_{y_var}"][1] - vertices[f"max_{x_var}"][1]) /
@@ -131,29 +143,48 @@ for d in datelist:
     full_veg_cover = vertices[f"max_{x_var}"][0]
     plt.axvline(full_veg_cover)
 
+    points =  checkIntersection2(points[hull.vertices, 0],points[hull.vertices, 1],
+                                 grad_warm_edge,intercept_warm_edge)
 
-    # Arbitrary point P
-    p = [0.6, 300] # x and y coords
-
-    T_soil, T_canopy = soil_canopy_temperatures(p[0],
-                                                p[1],
+    point_cloud["T_SOIL"], point_cloud["T_CANOPY"] = soil_canopy_temperatures(_x,
+                                                _y,
                                                 cold_edge,
                                                 grad_warm_edge,
                                                 intercept_warm_edge,
                                                 full_veg_cover
                                                 )
+    arb = [0.6, 287]
+    arb_ts, arb_tc = soil_canopy_temperatures(arb[0],
+                                                arb[1],
+                                                cold_edge,
+                                                grad_warm_edge,
+                                                intercept_warm_edge,
+                                                full_veg_cover
+                                                )
+    print(arb_ts,arb_tc)
+    plt.plot(arb[0], arb[1], marker = "D", color  ="r")
+    plt.plot(full_veg_cover, arb_tc, marker="D", color="r")
+    plt.plot(0, arb_ts, marker="D", color="r")
+    plt.plot(0, arb_ts, marker="D", color="r")
 
+    cordinates = [point_cloud["LAT"].values , point_cloud["LON"].values]
+    mi_array = zip(*cordinates)
+    point_cloud.index = pd.MultiIndex.from_tuples(mi_array, names=["LAT", "LON"])
 
+    ds_point_cloud = point_cloud.to_xarray()
 
-# create_scatter_plot(
-#     ref=common_data["VOD_KU"],
-#     test=common_data["TSURF"],
-#     # test_colour=common_data["SM_C1"],
-#     xlabel= "VOD_KU",
-#     ylabel="TSURF",
-#     # cbar_label= "SM_C1",
-#     # xlim = (0,1.4),
-#     # ylim = (270,320),
-#     # cbar_scale = (250,280),
-#     stat_text=False
-#     )
+    variables = ["T_SOIL", "T_CANOPY", "TSURF"]
+    vmin, vmax = 270, 330
+
+    fig, axes = plt.subplots(3, 1, figsize=(15, 5))
+
+    for ax, var in zip(axes, variables):
+        data = ds_point_cloud[var]
+        im = ax.imshow(np.flipud(data), vmin=vmin, vmax=vmax)
+        ax.set_title(var)
+        ax.axis('off')  # optional, remove axes for cleaner look
+
+    # fig.colorbar(im, ax=axes, orientation='horizontal', fraction=0.02, pad=0.04)
+    plt.tight_layout()
+    plt.show()
+
