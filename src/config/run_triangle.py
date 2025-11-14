@@ -7,7 +7,7 @@ matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 from scipy.spatial import ConvexHull, convex_hull_plot_2d
 from shapely import LineString, wkt
-from shapely.geometry import LineString, Polygon
+from shapely.geometry import LineString, Polygon, Point
 
 import pandas as pd
 from utilities.utils import (bbox,
@@ -19,11 +19,11 @@ from utilities.utils import (bbox,
 from utilities.plotting import scatter_density,create_scatter_plot
 from config.paths import path_lprm, path_bt
 
-list_bbox=  [
-    5.444321616516959,
-    48.80171669608512,
-    56.4549472951021,
-    51.77115754395507
+list_bbox= [
+    -125.01256480010211,
+    49.06769085125356,
+    -100.70177607125227,
+    52.87377592509242
   ]
 
 # Frequencies(AMSR2):
@@ -55,13 +55,22 @@ def dummy_line(gradient, intercept):
     return p_0, p_5
 
 
-def interceptor(poly, p_0, p_5,):
+def interceptor(poly, p_0, p_5, TSURF):
 
     line = LineString([(0,p_0) ,(5, p_5)])
 
     intersection = poly.intersection(line)
-    t_soil = list(intersection.coords)[0][1]
-    t_canopy = list(intersection.coords)[1][1]
+    # if not isinstance(intersection, LineString):
+    #     x =1
+    if isinstance(intersection, LineString) and not intersection.is_empty:
+        t_soil, t_canopy = [list(intersection.coords)[i][1] for i in range(0,2)]
+    if isinstance(intersection, Point):
+        t_soil = t_canopy = list(intersection.coords)[0][1]
+    if intersection.is_empty:
+        print(intersection)
+
+        t_soil = t_canopy= TSURF
+
 
     return t_soil, t_canopy
 
@@ -97,8 +106,6 @@ for d in datelist:
     LPRM = LPRM.to_pandas()
     LPRM = bbox(LPRM, list_bbox)
 
-    # ref_compound = pd.concat([ref_compound,LPRM])
-    # test_compound = pd.concat([test_compound,BT])
     print(f"{d} read")
 
     plt.ion()
@@ -174,27 +181,19 @@ for d in datelist:
     hull_y = points[hull.vertices, 1]
     poly = Polygon((x, y) for x, y in zip(hull_x, hull_y))
 
-    results = list(map(lambda p: interceptor(poly=poly, p_0 = p[0], p_5 = p[1]),
-                       zip(point_cloud["p_o"], point_cloud["p_5"])))
+    results = list(map(lambda p: interceptor(poly=poly, p_0 = p[0], p_5 = p[1], TSURF =p[2]),
+                       zip(point_cloud["p_o"], point_cloud["p_5"], point_cloud["TSURF"])))
 
     point_cloud["T_soil_hull"], point_cloud["T_canopy_hull"] = zip(*results)
-
-
-
-    print(gagagag)
-    # intersection_hull =  interceptor(points[hull.vertices, 0],
-    #                                         points[hull.vertices, 1],
-    #                                         point_cloud["p_o"],
-    #                                         point_cloud["p_5"])
 
 
     cordinates = [point_cloud["LAT"].values , point_cloud["LON"].values]
     mi_array = zip(*cordinates)
     point_cloud.index = pd.MultiIndex.from_tuples(mi_array, names=["LAT", "LON"])
 
-    variables = ["T_SOIL", "T_CANOPY", "TSURF","SM_C1"]
+    variables = ["T_SOIL", "T_soil_hull", "TSURF","SM_C1"]
     cbar_lut = {"T_SOIL": (270, 330),
-                 "T_CANOPY" : (270, 330),
+                 "T_soil_hull" : (270, 330),
                  "TSURF" : (270, 330),
                  "SM_C1" : (0, 0.5),
                  }
