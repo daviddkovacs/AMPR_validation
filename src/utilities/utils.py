@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.neighbors import BallTree
 import pandas as pd
 pd.options.mode.chained_assignment = None
+from shapely.geometry import LineString,  Point
 
 def to_radians(df,
                lat = "lat",
@@ -156,8 +157,8 @@ def find_common_coords(lprm, bt):
     :param test:  dataframe test
     :return: common dataframe
     """
-    bt = bt.drop(columns = ["SCANTIME"])
-    lprm = lprm.drop(columns = ["SCANTIME","FLAGS"])
+    # bt = bt.drop(columns = ["SCANTIME"])
+    lprm = lprm.drop(columns = ["FLAGS"])
     bt["LAT"] = bt["LAT"] + 0.05
     bt["LON"] = bt["LON"] + 0.05
 
@@ -166,8 +167,8 @@ def find_common_coords(lprm, bt):
     bt['LAT'] = bt['LAT'].round(4)
     bt['LON'] = bt['LON'].round(4)
 
-    common_df = pd.merge(lprm,bt,how='inner', on = ["LON","LAT"])
-    common_df =  common_df.dropna(subset=['TSURF'])
+    common_df = pd.merge(lprm,bt,how='inner', on = ["LON","LAT"], suffixes=('_LPRM', '_BT'))
+    common_df =  common_df.dropna(subset=['BT_V',"TSURF"])
 
     return common_df
 
@@ -182,3 +183,86 @@ def normalize(array):
     scaled_array = (array - minimum) / (maximum -minimum )
     scaled_array = np.positive(scaled_array)
     return scaled_array
+
+
+def extreme_hull_vals(x_values,
+                      y_values,
+                      x_variable = "VOD_KU",
+                      y_variable = "TSURF"):
+
+    hull_df = pd.DataFrame({
+        x_variable: x_values,
+        y_variable: y_values
+    })
+
+    min_x = hull_df.loc[hull_df.loc[hull_df[x_variable] == hull_df[x_variable].min(), y_variable].idxmin()].values
+    max_x = hull_df.loc[hull_df.loc[hull_df[x_variable] == hull_df[x_variable].max(), y_variable].idxmin()].values
+
+    min_y = hull_df.loc[hull_df.loc[hull_df[y_variable] == hull_df[y_variable].min(), x_variable].idxmin()].values
+    max_y = hull_df.loc[hull_df.loc[hull_df[y_variable] == hull_df[y_variable].max(), x_variable].idxmin()].values
+
+    vertex_dict = {
+        f"min_{x_variable}" : min_x,
+        f"max_{x_variable}" : max_x,
+        f"min_{y_variable}" : min_y,
+        f"max_{y_variable}" : max_y,
+                  }
+
+    return vertex_dict
+
+def soil_canopy_temperatures(point_x,
+                             point_y,
+                             cold_edge,
+                             grad_warm_edge,
+                             intercept_warm_edge,
+                             full_veg_cover
+                             ):
+    # equation of line: Tsoil = grad_warm_edge * point_x + intercept_warm_edge
+    a = point_y - cold_edge
+    b = (grad_warm_edge * point_x + intercept_warm_edge) - point_y
+
+    A = cold_edge
+    D = intercept_warm_edge
+    T_soil_extreme = ((a / (a+b)) * (D - A) + A)
+
+    B = cold_edge
+    C = (grad_warm_edge * full_veg_cover + intercept_warm_edge)
+    T_canopy_extreme = ((a / (a + b)) * (C -B ) + B)
+
+    # these gradients and intercepts are needed to find the intersection for every line for every point with the hull
+    # yes, I know I define multiple variables to be the same, but (for now) it is better to understand..
+    gradient_of_point =  (( T_soil_extreme - T_canopy_extreme) / (0 - full_veg_cover))
+    intercept_of_point = T_soil_extreme
+
+    t_dict = {"T_soil_extreme" : T_soil_extreme,
+              "T_canopy_extreme": T_canopy_extreme,
+              "gradient_of_point" : gradient_of_point,
+              "intercept_of_point" : intercept_of_point}
+
+    return t_dict
+
+
+def dummy_line(gradient, intercept):
+
+    # We need to get two arbitrary points of the line
+    # To find the intersection with the hull
+    # y_0 = intercept
+    p_5 = (gradient * 5) + intercept
+    p_0 = intercept
+
+    return p_0, p_5
+
+
+def interceptor(poly, p_0, p_5, TSURF):
+
+    line = LineString([(0,p_0) ,(5, p_5)])
+
+    intersection = poly.intersection(line)
+    if isinstance(intersection, LineString) and not intersection.is_empty:
+        t_soil, t_canopy = [list(intersection.coords)[i][1] for i in range(0,2)]
+    if isinstance(intersection, Point):
+        t_soil = t_canopy = list(intersection.coords)[0][1]
+    if intersection.is_empty:
+        t_soil = t_canopy= TSURF
+
+    return t_soil, t_canopy

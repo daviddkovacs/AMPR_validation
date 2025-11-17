@@ -29,50 +29,54 @@ def statistics(ref,test):
 
 
 def create_scatter_plot(ref,
-                 test,
-                 xlabel = "",
-                 ylabel = "",
-                 xmin_val=None,
-                 xmax_val= None,
-                 ymin_val = None,
-                 ymax_val = None,
-                 stat_text = True,
-                 showfig = True,
+                        test,
+                        test_colour=None,
+                        xlabel = None,
+                        ylabel = None,
+                        cbar_label="Density",
+                        xlim=(None, None),
+                        ylim=(None, None),
+                        cbar_scale=(None, None),
+                        stat_text = True,
                         ):
 
 
     mask = np.isfinite(ref) & np.isfinite(test)
+    if test_colour is not None:
+        mask &= np.isfinite(test_colour)
+
     ref = ref[mask]
     test = test[mask]
+    test_colour = test_colour[mask] if test_colour is not None else None
 
-    xy = np.vstack([ref, test])
-    z = gaussian_kde(xy)(xy)
+    if test_colour is None:
+        xy = np.vstack([ref, test])
+        z = gaussian_kde(xy)(xy)
+    else:
+        z = test_colour
 
     plt.figure(figsize=(6, 6))
-
-    plt.scatter(ref, test, c=z, s=20, cmap='viridis', )
-
-    plt.plot([xmin_val, xmax_val], [ymin_val, ymax_val], 'k-', lw=1, )
+    sc = plt.scatter(ref, test, c=z, s=20, cmap='turbo', vmin= cbar_scale[0], vmax = cbar_scale[1])
 
     if stat_text:
-        stats_dict = statistics(ref, test)
+        plt.plot([xlim[0], xlim[1]], [ylim[0], ylim[1]], 'k-', lw=1)
 
+        stats_dict = statistics(ref, test)
         stats_text = (f"R: {stats_dict['r']}\nRMSE: {stats_dict['rmse']}\n"
                       f"Bias: {stats_dict['bias']}\n"
                       f"Precision: {stats_dict['precision']}\n"
                       f"N: {stats_dict['N']}\n")
-
         plt.text(0.05, 0.95, stats_text, transform=plt.gca().transAxes,
                  verticalalignment='top', horizontalalignment='left', fontsize=14)
 
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.grid(False)
-    plt.xlim([xmin_val, xmax_val])
-    plt.ylim([ymin_val, ymax_val])
+    plt.xlim([xlim[0], xlim[1]])
+    plt.ylim([ylim[0], ylim[1]])
+    plt.colorbar(sc, label=cbar_label)
     plt.tight_layout()
-    if showfig:
-        plt.show()
+    plt.show()
 
 
 def scatter_density(ref,
@@ -171,11 +175,11 @@ def create_longitude_plot(ref_x,
 
     ax2 = ax1.twinx()
     ax2.plot(test2_x, test2_y,
-             label=f"ERA5 {bio_var}",
+             label=f"{bio_var}",
              color="tab:brown",
              linestyle='--',
              markersize=2)
-    ax2.set_ylabel(f"ERA5 {bio_var}")
+    ax2.set_ylabel(f"{bio_var}")
 
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
@@ -188,5 +192,22 @@ def create_longitude_plot(ref_x,
     if show_fig:
         plt.show()
 
+
+def plot_maps(df, cbar_lut):
+
+    cordinates = [df["LAT"].values, df["LON"].values]
+    mi_array = zip(*cordinates)
+    df.index = pd.MultiIndex.from_tuples(mi_array, names=["LAT", "LON"])
+
+    fig, axes = plt.subplots(2, 2, figsize=(8, 8))
+    axes = axes.flatten()
+    for ax, var in zip(axes, cbar_lut.keys()):
+        data = df.to_xarray()[var]
+        im = ax.imshow(np.flipud(data), vmin=cbar_lut[var][0], vmax=cbar_lut[var][1])
+        ax.set_title(var)
+        ax.axis('off')
+
+    plt.tight_layout()
+    plt.show()
 
 
