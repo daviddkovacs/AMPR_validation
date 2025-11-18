@@ -1,7 +1,10 @@
+import os.path
+
 from cartopy.mpl.clip_path import bbox_to_path
 from shapely.geometry import LineString,  Point
 from lprm.retrieval.lprm_v6_1.run_lprmv6 import load_band_from_ds
 import rioxarray
+import pandas as pd
 from utilities.utils import bbox
 
 def soil_canopy_temperatures(point_x,
@@ -62,7 +65,7 @@ def interceptor(poly, p_0, p_5, TSURF):
     return t_soil, t_canopy
 
 
-def tiff_aux(path,lista):
+def get_aux(path,var):
 
     dataset = rioxarray.open_rasterio(path)[0,:,:]
     dataset = dataset.assign_coords(
@@ -72,19 +75,38 @@ def tiff_aux(path,lista):
     dataarray = dataset.rename({"x" : "LON",
                                 "y" : "LAT"})
     dataarray = dataarray.drop_vars(["band", "spatial_ref"])
-    panda = dataarray.to_dataframe("var").reset_index()
+    panda = dataarray.to_dataframe(var).reset_index()
 
-    subset_panda = bbox(panda,lista)
+    return panda
 
+
+def tiff_df(path,lista,target_res):
+
+    path_BLD = os.path.join(path,f"auxiliary_data_BLD_{target_res}km")
+    path_SND = os.path.join(path,f"auxiliary_data_SND_{target_res}km")
+    path_CLY = os.path.join(path,f"auxiliary_data_CLY_{target_res}km")
+
+    BLD = get_aux(path_BLD, "BLD")
+    SND = get_aux(path_SND, "SND")
+    CLY = get_aux(path_CLY, "CLY")
+
+    _common_df = pd.merge(BLD,SND,
+                         how='inner', on = ["LON","LAT"],)
+    common_df = pd.merge(_common_df,CLY,
+                         how='inner', on = ["LON","LAT"],)
+
+    subset_panda = bbox(common_df,lista)
+    subset_panda = subset_panda.set_index(['LAT','LON'])
     return subset_panda
 
 
-x = tiff_aux("/home/ddkovacs/shares/climers/Projects/CCIplus_Soil_Moisture/07_data/LPRM/aux_data/coarse_resolution/lprm_v6/soil_content/auxiliary_data_BLD_25km",
+x = tiff_df("/home/ddkovacs/shares/climers/Projects/CCIplus_Soil_Moisture/07_data/LPRM/aux_data/coarse_resolution/lprm_v6/soil_content/",
              [
                  -123.68616150473056,
                  42.853690174978794,
                  -95.746707235368,
                  48.80496307433518
-             ]
+             ],
+             "25"
              )
 

@@ -150,26 +150,37 @@ def calc_surface_temperature(bt_Ka_input: np.ndarray) -> np.ndarray:
     return temperature
 
 
-def find_common_coords(lprm, bt):
+def find_common_coords(df1,
+                       df2,
+                       target_res,
+                       dropna_subset= ['BT_V',"TSURF"],
+                       suffixes = ('_LPRM', '_BT')):
     """
     Finding common locs between two datasets. Needed to avoid dimension mismatch when plotting.
 
-    :param ref: dataframe reference
-    :param test:  dataframe test
+    :df1 ref: dataframe reference
+    :df2 test:  dataframe test (must add offset to match ref coords)
     :return: common dataframe
     """
+    offset_lut = {"10" : 0.05,
+                  "25" : 0.125}
+
     # bt = bt.drop(columns = ["SCANTIME"])
-    lprm = lprm.drop(columns = ["FLAGS"])
-    bt["LAT"] = bt["LAT"] + 0.05
-    bt["LON"] = bt["LON"] + 0.05
+    # lprm = lprm.drop(columns = ["FLAGS"])
+    df2["LAT"] = df2["LAT"] + offset_lut[target_res]
+    df2["LON"] = df2["LON"] + offset_lut[target_res]
 
-    lprm['LAT'] = lprm['LAT'].round(4)
-    lprm['LON'] = lprm['LON'].round(4)
-    bt['LAT'] = bt['LAT'].round(4)
-    bt['LON'] = bt['LON'].round(4)
+    df1['LAT'] = df1['LAT'].round(4)
+    df1['LON'] = df1['LON'].round(4)
+    df2['LAT'] = df2['LAT'].round(4)
+    df2['LON'] = df2['LON'].round(4)
 
-    common_df = pd.merge(lprm,bt,how='inner', on = ["LON","LAT"], suffixes=('_LPRM', '_BT'))
-    common_df =  common_df.dropna(subset=['BT_V',"TSURF"])
+    common_df = pd.merge(df1, df2 ,how='inner', on = ["LON","LAT"], suffixes=suffixes)
+    common_df =  common_df.dropna(subset=dropna_subset)
+
+    cordinates = [common_df["LAT"].values, common_df["LON"].values]
+    mi_array = zip(*cordinates)
+    common_df.index = pd.MultiIndex.from_tuples(mi_array, names=["LAT", "LON"])
 
     return common_df
 

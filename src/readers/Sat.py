@@ -5,7 +5,7 @@ from datetime import datetime
 import xarray as xr
 import pandas as pd
 import os
-
+from lprm.satellite_specs import get_specs
 
 def resolution_path(target_res):
 
@@ -15,6 +15,7 @@ def resolution_path(target_res):
         res_path = "coarse_resolution"
 
     return res_path
+
 
 class BTData:
     """
@@ -39,7 +40,7 @@ class BTData:
                  **kwargs):
 
         self.path = path
-        self.sat_freq = sat_freq
+        self.sat_freq = get_specs(sat_sensor.upper()).frequencies[sat_freq.upper()]
         self.sat_sensor = sat_sensor
         self.overpass = overpass
         self.target_res = target_res
@@ -100,7 +101,7 @@ class LPRMData(BTData):
 
         dataset = self.to_xarray()
         pandas = dataset.to_dataframe()
-        pandas = pandas.reset_index(drop=True)
+        # pandas = pandas.reset_index(drop=True)
         # pandas = pandas.dropna(subset=['VOD_C2'])
 
         return pandas
