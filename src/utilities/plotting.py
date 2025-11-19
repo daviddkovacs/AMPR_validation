@@ -235,6 +235,7 @@ def plot_maps_day_night(
     """
 
     night_data = night_LPRM[f"SM_{sat_band}"]
+    original_data = merged_df[f"SM_{sat_band}"]
     adj_data = merged_df[f"SM_ADJ"]
 
     night_trim = night_data.isel(LON=slice(0, adj_data.sizes['LON']),
@@ -246,7 +247,7 @@ def plot_maps_day_night(
     diff_values = np.where(
         np.isnan(adj_data.data) | np.isnan(night_trim.data),
         np.nan,
-        adj_data.data - night_trim.data
+        night_trim.data - adj_data.data
     )
 
     diff =  xr.DataArray(data = diff_values,

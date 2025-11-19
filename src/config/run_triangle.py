@@ -24,11 +24,11 @@ from utilities.plotting import scatter_density, plot_maps_LPRM, plot_maps_day_ni
 from config.paths import path_lprm, path_bt, path_aux
 
 
-list_bbox=  [
-    -168.08661989236148,
-    -56.72359991859152,
-    173.92370527775012,
-    72.65863444309369
+list_bbox= [
+    -168.63835264498513,
+    -48.57856090133727,
+    173.51106084596557,
+    70.73328245211653
   ]
 
 # Frequencies(AMSR2):
