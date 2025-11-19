@@ -239,13 +239,16 @@ def plot_maps_day_night(
 
     night_trim = night_data.isel(LON=slice(0, adj_data.sizes['LON']),
                                  LAT=slice(0, adj_data.sizes['LAT']))
+
     night_trim = night_trim.sortby(["LAT", "LON"])
     adj_data = adj_data.sortby(["LAT", "LON"])
+
     diff_values = np.where(
         np.isnan(adj_data.data) | np.isnan(night_trim.data),
         np.nan,
         adj_data.data - night_trim.data
     )
+
     diff =  xr.DataArray(data = diff_values,
                          dims = ["LAT", "LON"],
                          coords =  dict(
@@ -270,12 +273,9 @@ def plot_maps_day_night(
     )
     axes[1,0].set_title("Night − Day")
 
-    # adj_data.plot.pcolormesh(
-    #     x="LON", y="LAT", cmap="coolwarm", ax=axes[1,1], vmin= -1, vmax= 1,
-    # )
-    # axes[1,1].set_title("Night − Day")
+    axes[1,1].hist(diff.values.flatten(), bins = 50, range= (-0.5, 0.5), histtype = 'bar' , color = "tab:blue")
+    axes[1,1].set_title("Night − Day")
 
     plt.show()
 
-    x=1
 
