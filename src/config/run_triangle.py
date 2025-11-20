@@ -23,7 +23,6 @@ from utilities.retrieval_helpers import (
 from utilities.plotting import scatter_density, plot_maps_LPRM, plot_maps_day_night
 from config.paths import path_lprm, path_bt, path_aux
 
-
 list_bbox= [
     -168.63835264498513,
     -48.57856090133727,
@@ -38,152 +37,162 @@ sat_sensor = "amsr2"
 overpass = "day"
 target_res = "25"
 
-composite_start = "2024-06-01"
-composite_end = "2024-07-01"
+composite_start = "2024-01-01"
+composite_end = "2024-12-31"
 
-datelist = get_dates(composite_start, composite_end)
+datelist = get_dates(composite_start, composite_end, freq = "D")
 
-SM_ADJ_TS = xr.DataArray()
+daytime_ts = []
 
 for d in datelist:
+    try:
+        BT_object = BTData(path = path_bt,
+                       date = d,
+                       sat_freq = sat_band,
+                       overpass = overpass,
+                       sat_sensor = sat_sensor,
+                       target_res = target_res,
+                       )
 
-    BT_object = BTData(path = path_bt,
-                   date = d,
-                   sat_freq = sat_band,
-                   overpass = overpass,
-                   sat_sensor = sat_sensor,
-                   target_res = target_res,
-                   )
+        BT = BT_object.to_pandas()
+        BT = bbox(BT, list_bbox)
 
-    BT = BT_object.to_pandas()
-    BT = bbox(BT, list_bbox)
-
-    BT["MPDI"] =  mpdi(BT["BT_V"], BT["BT_H"])
-
-
-    LPRM_object = LPRMData(path =path_lprm,
-                   date = d,
-                   sat_freq = sat_band,
-                   overpass = overpass,
-                   sat_sensor = sat_sensor,
-                   target_res = target_res,
-                   )
-
-    LPRM = LPRM_object.to_pandas()
-    LPRM = bbox(LPRM, list_bbox)
-
-    night_LPRM_object = LPRMData(path =path_lprm,
-                   date = d,
-                   sat_freq = sat_band,
-                   overpass = "night",
-                   sat_sensor = sat_sensor,
-                   target_res = target_res,
-                   )
-
-    # night_LPRM = night_LPRM_object.to_pandas()
-    night_LPRM = night_LPRM_object.to_xarray(list_bbox)
-
-    print(f"{d} read")
-
-    plt.ion()
-    common_data = find_common_coords(BT,LPRM,target_res)
-
-    x_var = "VOD_KU"
-    y_var = "TSURF"
-    common_data = common_data.dropna(how = "any")
-
-    x = common_data[x_var]
-    y = common_data[y_var]
-
-    # scatter_density(
-    #     ref=x,
-    #     test=y,
-    #     test_colour=common_data[f"SM_{sat_band}"],
-    #     xlabel= x_var,
-    #     ylabel=y_var,
-    #     cbar_label= f"SM_{sat_band}",
-    #     # cbar_type = "jet",
-    #     xlim = (0,1.4),
-    #     ylim = (273,330),
-    #     cbar_scale = (0,0.5),
-    #     # dpi =5
-    #     )
-
-    points = np.array([x,y]).T
-
-    hull_x, hull_y = convex_hull(points)
-
-    vertex = extreme_hull_vals(hull_x,
-                               hull_y,
-                               x_variable= x_var,
-                               y_variable= y_var, )
+        BT["MPDI"] =  mpdi(BT["BT_V"], BT["BT_H"])
 
 
-    # Gradient of warm edge (y2-y1) / (x2-x1)
-    # 0th is x and 1st index is y coord
-    grad_warm_edge = ((vertex[f"max_{y_var}"][1] - vertex[f"max_{x_var}"][1]) /
-                 (vertex[f"max_{y_var}"][0] - vertex[f"max_{x_var}"][0]))
+        LPRM_object = LPRMData(path =path_lprm,
+                       date = d,
+                       sat_freq = sat_band,
+                       overpass = overpass,
+                       sat_sensor = sat_sensor,
+                       target_res = target_res,
+                       )
 
-    # Intercept of warm edge on y-axis
-    intercept_warm_edge = ((grad_warm_edge * vertex[f"max_{x_var}"][0]) * -1) + vertex[f"max_{x_var}"][1]
+        LPRM = LPRM_object.to_pandas()
+        LPRM = bbox(LPRM, list_bbox)
 
-    # Cold edge
-    cold_edge = vertex[f"min_{y_var}"][1]
+        night_LPRM_object = LPRMData(path =path_lprm,
+                       date = d,
+                       sat_freq = sat_band,
+                       overpass = "night",
+                       sat_sensor = sat_sensor,
+                       target_res = target_res,
+                       )
 
-    # full vegetation cover edge
-    full_veg_cover = vertex[f"max_{x_var}"][0]
+        # night_LPRM = night_LPRM_object.to_pandas()
+        night_LPRM = night_LPRM_object.to_xarray(list_bbox)
 
-    # plt.plot(hull_x, hull_y, 'b--', lw=2)
-    # plt.plot(x, grad_warm_edge * x + intercept_warm_edge, label = "Warm edge")
-    # plt.axhline(cold_edge)
-    # plt.axvline(full_veg_cover)
+        print(f"{d} read")
 
-    temperatures_data = soil_canopy_temperatures(x,
-                                                y,
-                                                cold_edge,
-                                                grad_warm_edge,
-                                                intercept_warm_edge,
-                                                full_veg_cover
-                                                )
+        plt.ion()
+        common_data = find_common_coords(BT,LPRM,target_res)
 
-    common_data["T_SOIL"] = temperatures_data["T_soil_extreme"]
-    common_data["T_CANOPY"] = temperatures_data["T_canopy_extreme"]
+        x_var = "VOD_KU"
+        y_var = "TSURF"
+        common_data = common_data.dropna(how = "any")
 
-    # Grad and intercept for ALL points!
-    common_data["gradient"] = temperatures_data["gradient_of_point"].values
-    common_data["intercept"] = temperatures_data["intercept_of_point"].values
+        x = common_data[x_var]
+        y = common_data[y_var]
 
-    common_data["p_o"], common_data["p_5"] = dummy_line(
-        common_data["gradient"],common_data["intercept"])
+        # scatter_density(
+        #     ref=x,
+        #     test=y,
+        #     test_colour=common_data[f"SM_{sat_band}"],
+        #     xlabel= x_var,
+        #     ylabel=y_var,
+        #     cbar_label= f"SM_{sat_band}",
+        #     # cbar_type = "jet",
+        #     xlim = (0,1.4),
+        #     ylim = (273,330),
+        #     cbar_scale = (0,0.5),
+        #     # dpi =5
+        #     )
+
+        points = np.array([x,y]).T
+
+        hull_x, hull_y = convex_hull(points)
+
+        vertex = extreme_hull_vals(hull_x,
+                                   hull_y,
+                                   x_variable= x_var,
+                                   y_variable= y_var, )
 
 
-    poly = Polygon((x, y) for x, y in zip(hull_x, hull_y))
+        # Gradient of warm edge (y2-y1) / (x2-x1)
+        # 0th is x and 1st index is y coord
+        grad_warm_edge = ((vertex[f"max_{y_var}"][1] - vertex[f"max_{x_var}"][1]) /
+                     (vertex[f"max_{y_var}"][0] - vertex[f"max_{x_var}"][0]))
 
-    results = list(map(lambda p: interceptor(poly=poly, p_0 = p[0], p_5 = p[1], TSURF =p[2]),
-                       zip(common_data["p_o"], common_data["p_5"], common_data["TSURF"])))
+        # Intercept of warm edge on y-axis
+        intercept_warm_edge = ((grad_warm_edge * vertex[f"max_{x_var}"][0]) * -1) + vertex[f"max_{x_var}"][1]
 
-    common_data["T_soil_hull"], common_data["T_canopy_hull"] = zip(*results)
+        # Cold edge
+        cold_edge = vertex[f"min_{y_var}"][1]
 
-    merged_geo = retrieve_LPRM(common_data,
-                  list_bbox,
-                  target_res,
-                  path_aux,
-                  sat_sensor,
-                  sat_band
-                  )
+        # full vegetation cover edge
+        full_veg_cover = vertex[f"max_{x_var}"][0]
 
-    cbar_lut = {
-        "TSURF": (270, 330),
-        "T_soil_hull": (270, 330),
-        "T_canopy_hull": (270, 330),
-        f"SM_{sat_band}": (0, 0.5),
-        f"SM_ADJ": (0, 0.5),
-        f"DIF_SM{sat_band}-ADJ": (-0.25, 0.25),
-        sat_band: (0, 0.5),
-    }
+        # plt.plot(hull_x, hull_y, 'b--', lw=2)
+        # plt.plot(x, grad_warm_edge * x + intercept_warm_edge, label = "Warm edge")
+        # plt.axhline(cold_edge)
+        # plt.axvline(full_veg_cover)
 
-    plot_maps_LPRM(merged_geo, cbar_lut, d)
-    plot_maps_day_night(merged_geo, night_LPRM, sat_band,)
+        temperatures_data = soil_canopy_temperatures(x,
+                                                    y,
+                                                    cold_edge,
+                                                    grad_warm_edge,
+                                                    intercept_warm_edge,
+                                                    full_veg_cover
+                                                    )
 
-    # SM_ADJ_array = merged_geo["SM_ADJ"].expand_dims(time = )
-    # SM_ADJ_TS = xr.concat([SM_ADJ_TS,SM_ADJ_array], "time")
+        common_data["T_SOIL"] = temperatures_data["T_soil_extreme"]
+        common_data["T_CANOPY"] = temperatures_data["T_canopy_extreme"]
+
+        # Grad and intercept for ALL points!
+        common_data["gradient"] = temperatures_data["gradient_of_point"].values
+        common_data["intercept"] = temperatures_data["intercept_of_point"].values
+
+        common_data["p_o"], common_data["p_5"] = dummy_line(
+            common_data["gradient"],common_data["intercept"])
+
+
+        poly = Polygon((x, y) for x, y in zip(hull_x, hull_y))
+
+        results = list(map(lambda p: interceptor(poly=poly, p_0 = p[0], p_5 = p[1], TSURF =p[2]),
+                           zip(common_data["p_o"], common_data["p_5"], common_data["TSURF"])))
+
+        common_data["T_soil_hull"], common_data["T_canopy_hull"] = zip(*results)
+
+        merged_geo = retrieve_LPRM(common_data,
+                      list_bbox,
+                      target_res,
+                      path_aux,
+                      sat_sensor,
+                      sat_band
+                      )
+
+        cbar_lut = {
+            "TSURF": (270, 330),
+            "T_soil_hull": (270, 330),
+            "T_canopy_hull": (270, 330),
+            f"SM_{sat_band}": (0, 0.5),
+            f"SM_ADJ": (0, 0.5),
+            f"DIF_SM{sat_band}-ADJ": (-0.25, 0.25),
+            sat_band: (0, 0.5),
+        }
+
+        # plot_maps_LPRM(merged_geo, cbar_lut, d)
+        # plot_maps_day_night(merged_geo, night_LPRM, sat_band,)
+
+        daytime_arr = merged_geo[["SM_ADJ", f"SM_{sat_band}"]].expand_dims(time = [d.date()])
+        daytime_ts.append(daytime_arr)
+
+    except Exception as e:
+        print(e)
+        continue
+
+
+daytime_dataset = xr.concat(daytime_ts, dim="time")
+daytime_dataset["SM_ADJ"].sel(LAT=50, LON=16, method = "nearest").plot()
+daytime_dataset[f"SM_{sat_band}"].sel(LAT=50, LON=16, method = "nearest").plot()
+daytime_dataset[f"SM_{sat_band}"].sel(LAT=50, LON=16, method = "nearest").plot()
