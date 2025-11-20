@@ -6,6 +6,7 @@ matplotlib.use("TkAgg")
 import xarray as xr
 import matplotlib.pyplot as plt
 from shapely.geometry import Polygon
+import dask.array as da
 
 from utilities.utils import (
     bbox,
@@ -43,6 +44,7 @@ composite_end = "2024-12-31"
 datelist = get_dates(composite_start, composite_end, freq = "D")
 
 daytime_ts = []
+nighttime_ts = []
 
 for d in datelist:
     try:
@@ -186,6 +188,8 @@ for d in datelist:
 
         daytime_arr = merged_geo[["SM_ADJ", f"SM_{sat_band}"]].expand_dims(time = [d.date()])
         daytime_ts.append(daytime_arr)
+        nighttime_arr = night_LPRM[f"SM_{sat_band}"].expand_dims(time = [d.date()])
+        nighttime_ts.append(nighttime_arr)
 
     except Exception as e:
         print(e)
@@ -193,6 +197,8 @@ for d in datelist:
 
 
 daytime_dataset = xr.concat(daytime_ts, dim="time")
+nighttime_dataset = xr.concat(nighttime_ts, dim="time")
+
 daytime_dataset["SM_ADJ"].sel(LAT=50, LON=16, method = "nearest").plot()
 daytime_dataset[f"SM_{sat_band}"].sel(LAT=50, LON=16, method = "nearest").plot()
-daytime_dataset[f"SM_{sat_band}"].sel(LAT=50, LON=16, method = "nearest").plot()
+nighttime_dataset[f"SM_{sat_band}"].sel(LAT=50, LON=16, method = "nearest").plot()
