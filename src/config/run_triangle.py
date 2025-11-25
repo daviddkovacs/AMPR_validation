@@ -199,6 +199,7 @@ for d in datelist:
 daytime_dataset = xr.concat(daytime_ts, dim="time")
 nighttime_dataset = xr.concat(nighttime_ts, dim="time")
 
-daytime_dataset["SM_ADJ"].sel(LAT=50, LON=16, method = "nearest").plot()
-daytime_dataset[f"SM_{sat_band}"].sel(LAT=50, LON=16, method = "nearest").plot()
-nighttime_dataset[f"SM_{sat_band}"].sel(LAT=50, LON=16, method = "nearest").plot()
+daytime_dataset["SM_ADJ"].sel(LAT=50, LON=16, method = "nearest").plot(label = "Day adjust")
+daytime_dataset[f"SM_{sat_band}"].sel(LAT=50, LON=16, method = "nearest").plot(label = "Day original")
+nighttime_dataset.sel(LAT=50, LON=16, method = "nearest").plot(label = "night")
+plt.legend()
