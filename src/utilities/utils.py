@@ -255,3 +255,18 @@ def convex_hull(points):
     hull_y = np.append(hull_y,last_y)
 
     return hull_x, hull_y
+
+
+def pearson_corr(da1,
+                 column1,
+                 da2,
+                 column2
+                 ):
+
+    df_1 = da1.to_dataframe()
+    df_2 = da2.to_dataframe()
+    df_m = pd.concat([df_1, df_2], axis=1)
+    print(df_m)
+    r = df_m.corr(method="pearson").loc[column1, column2]
+
+    return np.round(r,2)

@@ -1,4 +1,6 @@
 import datetime
+import pandas as pd
+from scipy.stats import pearsonr
 from readers.Sat import BTData, LPRMData
 import matplotlib
 import numpy as np
@@ -6,15 +8,16 @@ matplotlib.use("TkAgg")
 import xarray as xr
 import matplotlib.pyplot as plt
 from shapely.geometry import Polygon
+import pandas as pd
 import dask.array as da
-
 from utilities.utils import (
     bbox,
     mpdi,
     extreme_hull_vals,
     find_common_coords,
     get_dates,
-    convex_hull
+    convex_hull,
+    pearson_corr
 )
 from utilities.retrieval_helpers import (
     soil_canopy_temperatures,
@@ -43,8 +46,9 @@ composite_end = "2024-12-31"
 
 datelist = get_dates(composite_start, composite_end, freq = "D")
 
-daytime_ts = []
-nighttime_ts = []
+dt_original_ts = []
+dt_adjusted_ts = []
+nt_ts = []
 
 for d in datelist:
     try:
@@ -60,7 +64,6 @@ for d in datelist:
         BT = bbox(BT, list_bbox)
 
         BT["MPDI"] =  mpdi(BT["BT_V"], BT["BT_H"])
-
 
         LPRM_object = LPRMData(path =path_lprm,
                        date = d,
@@ -111,14 +114,11 @@ for d in datelist:
         #     )
 
         points = np.array([x,y]).T
-
         hull_x, hull_y = convex_hull(points)
-
         vertex = extreme_hull_vals(hull_x,
                                    hull_y,
                                    x_variable= x_var,
                                    y_variable= y_var, )
-
 
         # Gradient of warm edge (y2-y1) / (x2-x1)
         # 0th is x and 1st index is y coord
@@ -183,23 +183,52 @@ for d in datelist:
             sat_band: (0, 0.5),
         }
 
-        # plot_maps_LPRM(merged_geo, cbar_lut, d)
-        # plot_maps_day_night(merged_geo, night_LPRM, sat_band,)
+        plot_maps_LPRM(merged_geo, cbar_lut, d)
+        plot_maps_day_night(merged_geo, night_LPRM, sat_band,)
 
-        daytime_arr = merged_geo[["SM_ADJ", f"SM_{sat_band}"]].expand_dims(time = [d.date()])
-        daytime_ts.append(daytime_arr)
-        nighttime_arr = night_LPRM[f"SM_{sat_band}"].expand_dims(time = [d.date()])
-        nighttime_ts.append(nighttime_arr)
+        dt_original_array = merged_geo[f"SM_{sat_band}"].expand_dims(time = [d.date()])
+        dt_original_ts.append(dt_original_array)
+
+        dt_adjusted_array = merged_geo[f"SM_ADJ"].expand_dims(time = [d.date()])
+        dt_adjusted_ts.append(dt_adjusted_array)
+
+        nt_arr = night_LPRM[f"SM_{sat_band}"].expand_dims(time = [d.date()])
+        nt_ts.append(nt_arr)
 
     except Exception as e:
         print(e)
         continue
 
+dt_ori_ds = xr.concat(dt_original_ts, dim="time")
+dt_adj_ds = xr.concat(dt_adjusted_ts, dim="time")
+nt_ds = xr.concat(nt_ts, dim="time")
 
-daytime_dataset = xr.concat(daytime_ts, dim="time")
-nighttime_dataset = xr.concat(nighttime_ts, dim="time")
+##
 
-daytime_dataset["SM_ADJ"].sel(LAT=50, LON=16, method = "nearest").plot(label = "Day adjust")
-daytime_dataset[f"SM_{sat_band}"].sel(LAT=50, LON=16, method = "nearest").plot(label = "Day original")
-nighttime_dataset.sel(LAT=50, LON=16, method = "nearest").plot(label = "night")
+lat = 37.555028632
+lon = -102.313477769
+
+day_orig = dt_ori_ds[f"SM_{sat_band}"].sel(LAT=lat, LON=lon, method = "nearest")
+day_adjust = dt_adj_ds["SM_ADJ"].sel(LAT=lat, LON=lon, method = "nearest")
+night_array = nt_ds.sel(LAT=lat, LON=lon, method = "nearest")
+
+##
+
+day_adjust.plot(label = "Day adjust")
+day_orig.plot(label = "Day original")
+night_array.plot(label = "night")
 plt.legend()
+
+bias_adjust = night_array.mean() - day_adjust.mean()
+bias_orig = night_array.mean() - day_orig.mean()
+
+
+r_night_adj = pearson_corr(night_array, f"SM_{sat_band}",
+                           day_adjust,"SM_ADJ")
+
+r_night_orig = pearson_corr(night_array, f"SM_{sat_band}",
+                           day_orig,f"SM_{sat_band}")
+
+
+# daytime_dataset["SM_ADJ"].isel(time= 0).plot()
+
