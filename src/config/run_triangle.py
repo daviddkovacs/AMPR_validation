@@ -188,8 +188,6 @@ for d in datelist:
         dt_original_array = merged_geo[f"SM_{sat_band}"].expand_dims(time = [d.date()])
         dt_original_ts.append(dt_original_array)
 
-        dt_adjusted_array = merged_geo[f"SM_ADJ"].expand_dims(time = [d.date()])
-        dt_adjusted_ts.append(dt_adjusted_array)
 
         nt_arr = night_LPRM[f"SM_{sat_band}"].expand_dims(time = [d.date()])
         nt_ts.append(nt_arr)
