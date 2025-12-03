@@ -17,61 +17,77 @@ NETWORK_stack = ISMN_stack["SCAN"]
 station_user = "Abrams"
 ts_cutoff = Timestamp("2015-01-01")
 depth_selection = Depth(0., 0.1)
-
-
 stat_list = [ 'Lind#1']
-for i in stat_list:
-    STATION = NETWORK_stack[i]
-    print(i)
-    try:
-        for  _, _sensor_sm in NETWORK_stack.iter_sensors(variable='soil_moisture',
-                                                         depth=depth_selection,
-                                                         filter_meta_dict={
-                                                             'station': [i],
-                                                         }):
 
-            if _sensor_sm.metadata["timerange_from"][1] > ts_cutoff:
-                ismn_sm = _sensor_sm.read_data()
+def run_ismn_multi_site(satellite_data,
+                        ISMN_instance,
+                        site_list,
+                        ts_cutoff,
+                        depth_selection,
+                        network = "SCAN"
+                        ):
+    """
+    Plot Soil T and Soil Moisture in loops for the selected ISMN sites.
+    :param satellite_data: Satellite data containing LPRM derived values. Usually the output of "run_triangle.py"
+    :param ISMN_instance: ISMN_Interface instance from .zip
+    :param site_list: List of sites to process from network.
+    :param ts_cutoff: Max date to limit sensor timespan.
+    :param depth_selection: How deep does the sensor go?
+    :param network: Which ISMN network do you use? Default: SCAN
+    """
+    NETWORK = ISMN_instance[network]
+    for i in site_list:
+        STATION = NETWORK[i]
+        print(i)
+        try:
+            for  _, _sensor_sm in NETWORK.iter_sensors(variable='soil_moisture',
+                                                             depth=depth_selection,
+                                                             filter_meta_dict={
+                                                                 'station': [i],
+                                                             }):
 
-            for _, _sensor_t in NETWORK_stack.iter_sensors(variable='soil_temperature',
-                                                           depth=depth_selection,
-                                                           filter_meta_dict={
-                                                               'station': [i],
-                                                           }):
-                if _sensor_t.metadata["timerange_from"][1] > ts_cutoff:
+                if _sensor_sm.metadata["timerange_from"][1] > ts_cutoff:
+                    ismn_sm = _sensor_sm.read_data()
 
-                    ismn_t = _sensor_t.read_data()
+                for _, _sensor_t in NETWORK.iter_sensors(variable='soil_temperature',
+                                                               depth=depth_selection,
+                                                               filter_meta_dict={
+                                                                   'station': [i],
+                                                               }):
+                    if _sensor_t.metadata["timerange_from"][1] > ts_cutoff:
+
+                        ismn_t = _sensor_t.read_data()
 
 
 
-        data =  sat_data.sel(
-            LAT =STATION.lat,
-            LON =STATION.lon,
-            method = "nearest"
-        )
+            data =  satellite_data.sel(
+                LAT =STATION.lat,
+                LON =STATION.lon,
+                method = "nearest"
+            )
 
-        sm_adj = data["SM_ADJ"]
-        sm_x = data["SM_X"]
-        sat_t_soil = data["T_soil_hull"]-273.15
-        sat_t_canopy = data["T_canopy_hull"] -273.15
-        sat_t = data["TSURF"] -273.15
+            sm_adj = data["SM_ADJ"]
+            sm_x = data["SM_X"]
+            sat_t_soil = data["T_soil_hull"]-273.15
+            sat_t_canopy = data["T_canopy_hull"] -273.15
+            sat_t = data["TSURF"] -273.15
 
-        temp_sm_plot(
-            ismn_t,
-            sat_t,
-            sat_t_soil,
-            sat_t_canopy,
-            ismn_sm,
-            sm_x,
-            sm_adj,
-            **{
-            "name" : STATION.name,
-            "lat" : np.round(STATION.lat,2),
-            "lon" : np.round(STATION.lon,2),
-        }
-        )
-    except:
-        continue
+            temp_sm_plot(
+                ismn_t,
+                sat_t,
+                sat_t_soil,
+                sat_t_canopy,
+                ismn_sm,
+                sm_x,
+                sm_adj,
+                **{
+                "name" : STATION.name,
+                "lat" : np.round(STATION.lat,2),
+                "lon" : np.round(STATION.lon,2),
+            }
+            )
+        except:
+            continue
 
 
 ##
