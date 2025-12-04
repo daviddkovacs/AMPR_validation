@@ -2,7 +2,8 @@ import numpy as np
 from sklearn.neighbors import BallTree
 import pandas as pd
 from scipy.spatial import ConvexHull
-
+import math
+from pandas import Timedelta
 pd.options.mode.chained_assignment = None
 
 
@@ -236,10 +237,20 @@ def extreme_hull_vals(x_values,
 
 def get_dates(composite_start,composite_end, freq = "ME"):
 
-    _datelist = pd.date_range(start=composite_start, end=composite_end, freq=freq)
-    datelist = [s.strftime("%Y-%m-%d") for s in _datelist]
+    datelist = pd.date_range(start=composite_start, end=composite_end, freq=freq)
 
     return datelist
+
+def save_nc(ds,path):
+    """
+    saving datasets with converting time dim from "object" type, as it raised errors.
+    :param ds: input dataset
+    :param path: full path with filename and extension (.nc)
+    """
+    comp = dict(zlib=True, complevel=4)
+    encoding = {var: comp for var in ds.data_vars}
+    ds = ds.assign_coords(time=pd.to_datetime(ds.time.values))
+    ds.to_netcdf(path, encoding =  encoding)
 
 def convex_hull(points):
 
@@ -256,3 +267,27 @@ def convex_hull(points):
     hull_y = np.append(hull_y,last_y)
 
     return hull_x, hull_y
+
+
+def pearson_corr(da1,
+                 column1,
+                 da2,
+                 column2
+                 ):
+
+    df_1 = da1.to_dataframe()
+    df_2 = da2.to_dataframe()
+    df_m = pd.concat([df_1, df_2], axis=1)
+    print(df_m)
+    r = df_m.corr(method="pearson").loc[column1, column2]
+
+    return np.round(r,2)
+
+
+def local_solar_time(scantime,
+            DOY,
+            long):
+    # use this for the dataframe
+    site_UTC = DOY + Timedelta(seconds=scantime)
+    site_solar = site_UTC + Timedelta(hours= long/ (math.pi * 12))
+    return site_solar

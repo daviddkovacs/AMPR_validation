@@ -8,7 +8,7 @@ import os
 import xarray as xr
 import mpl_scatter_density
 from matplotlib.colors import LinearSegmentedColormap
-
+from utilities.utils import pearson_corr
 
 def statistics(ref,test):
 
@@ -195,11 +195,14 @@ def create_longitude_plot(ref_x,
 
 
 def plot_maps_LPRM(ds,
-              cbar_lut,
-              date,
-             ):
+                   cbar_lut,
+                   date,
+                   ):
 
-    fig, axes = plt.subplots(2,3, figsize=(10, 10))
+    ncols = len(cbar_lut.keys()) if (len(cbar_lut.keys()) <3) else 3
+    nrows = 1 if len(cbar_lut.keys()) <= 3 else 2
+
+    fig, axes = plt.subplots(nrows,ncols, figsize=(10, 6))
     fig.suptitle(date)
 
     axes = axes.flatten()
@@ -210,12 +213,12 @@ def plot_maps_LPRM(ds,
         da.plot(ax=ax, vmin=cbar_lut[var][0], vmax=cbar_lut[var][1], cmap=color, add_colorbar=True)
         ax.set_title(var)
         ax.axis('off')
-        def format_coord(x, y, da=da):
-            # find nearest index
-            xi = int(np.clip(np.round(x), 0, da.sizes['LON']-1))
-            yi = int(np.clip(np.round(y), 0, da.sizes['LAT']-1))
-            value = da.values[yi, xi]
-            return f"x={x:.2f}, y={y:.2f}, {var}={value:.3f}"
+        def format_coord(x, y, da=da, var=var):
+            sel = ds.sel({"LON": x, "LAT": y}, method="nearest")
+            out = []
+            for v in list(cbar_lut.keys()):
+                out.append(f"{v}={float(sel[v]):.3f}")
+            return f"lon={x:.3f}, lat={y:.3f}, " + ", ".join(out)
         ax.format_coord = format_coord
     plt.tight_layout()
     plt.show()
@@ -270,7 +273,7 @@ def plot_maps_day_night(
     axes[0,1].set_title(f"Day Adjusted SM_{sat_band}")
 
     diff.plot.pcolormesh(
-        x="LON", y="LAT", cmap="coolwarm", ax=axes[1,0], vmin= -1, vmax= 1,
+        x="LON", y="LAT", cmap="coolwarm", ax=axes[1,0], vmin= -0.8, vmax= 0.8,
     )
     axes[1,0].set_title("Night − Day")
 
@@ -280,3 +283,83 @@ def plot_maps_day_night(
     plt.show()
 
 
+def plot_timeseries(dt_ori_ds, dt_adj_ds, nt_ds,lat,lon,sat_band = None):
+
+    day_orig = dt_ori_ds.sel(LAT=lat, LON=lon, method="nearest")
+    day_adjust = dt_adj_ds.sel(LAT=lat, LON=lon, method="nearest")
+    night_array = nt_ds.sel(LAT=lat, LON=lon, method="nearest")
+
+    day_adjust.plot(label = "Day adjust")
+    day_orig.plot(label = "Day original")
+    night_array.plot(label = "night")
+    plt.legend()
+    plt.plot()
+    # bias_adjust = night_array.mean() - day_adjust.mean()
+    # bias_orig = night_array.mean() - day_orig.mean()
+    #
+    # r_night_adj = pearson_corr(night_array, f"SM_{sat_band}",
+    #                            day_adjust,"SM_ADJ")
+    #
+    # r_night_orig = pearson_corr(night_array, f"SM_{sat_band}",
+    #                            day_orig,f"SM_{sat_band}")
+
+
+
+def temp_sm_plot(
+    insitu_t, satellite_t, satellite_t_soil, satellite_t_canopy,
+    insitu_sm, satellite_sm, satellite_adj, **kwargs):
+
+    insitu_t["soil_temperature"] = insitu_t["soil_temperature"] +273.15
+    insitu_sm_series = insitu_sm.iloc[:, 0]
+    satellite_sm_series = satellite_sm.to_series()
+    satellite_adj_series = satellite_adj.to_series()
+
+    df = pd.concat(
+        [
+            insitu_sm_series,
+            satellite_sm_series,
+            satellite_adj_series,
+        ],
+        axis=1
+    ).dropna()
+    df.columns = ["insitu", "lprm", "lprm_adj",]
+
+    r_sat = df["insitu"].corr(df["lprm"])
+    r_adj = df["insitu"].corr(df["lprm_adj"])
+
+    fig, axes = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
+
+    ax = axes[0]
+    insitu_t.plot(ax=ax, label="ISMN T_Soil")
+    satellite_t.plot(ax=ax, label="TSURF")
+    satellite_t_soil.plot(ax=ax, label="T_soil_hull")
+    satellite_t_canopy.plot(ax=ax, label="T_canopy_hull")
+    ax.set_title("Temperature")
+    ax.legend()
+
+    ax = axes[1]
+    insitu_sm.plot(ax=ax, label="ISMN SM")
+    satellite_sm.plot(ax=ax, label="LPRM SM (normal)")
+    satellite_adj.plot(ax=ax, label="LPRM SM (Adjusted!)")
+    ax.set_title("Soil Moisture")
+    ax.legend()
+
+    ax.text(
+        0.01, 0.97,
+        f"r(insitu, sat) = {r_sat:.2f}\n"
+        f"r(insitu, adj) = {r_adj:.2f}",
+        transform=ax.transAxes,
+        va="top"
+    )
+
+    t = satellite_sm.indexes["time"]
+    axes[1].set_xlim(t.min(), t.max())
+
+    if kwargs:
+        plt.suptitle(
+            f"{kwargs.get('name')}\nlat: {kwargs.get('lat')}, lon: {kwargs.get('lon')}",
+            fontsize=16
+        )
+
+    plt.tight_layout()
+    plt.show()
