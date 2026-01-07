@@ -8,6 +8,7 @@ import numpy as np
 import rioxarray
 import pandas as pd
 from shapely.geometry.multilinestring import MultiLineString
+from pandas import Timestamp,Timedelta
 
 from utilities.utils import bbox
 
@@ -158,4 +159,25 @@ def retrieve_LPRM(common_data,
 
     return  merged_geo
 
+def get_ISMN_data(ISMN_stack,
+                  station_user,
+                  depth_selection = {"start": 0,"end": 0.1},
+                  ts_cutoff = Timestamp("2024-06-01"),
+                  ):
 
+    base_coniditons = (
+        (ISMN_stack.metadata['instrument'].depth_from >= depth_selection["start"]) &
+        (ISMN_stack.metadata['instrument'].depth_to < depth_selection["end"]) &
+        (ISMN_stack.metadata["timerange_to"].val > ts_cutoff + Timedelta(days=1)) &
+        (ISMN_stack.metadata['station'].val == station_user)
+    )
+
+    conditions_sm = base_coniditons & (ISMN_stack.metadata['variable'].val == 'soil_moisture')
+    conditions_st = base_coniditons & (ISMN_stack.metadata['variable'].val == 'soil_temperature')
+
+    ids_sm = ISMN_stack.metadata[conditions_sm].index.to_list()
+    ids_st = ISMN_stack.metadata[conditions_st].index.to_list()
+    ts_sm, meta_sm = ISMN_stack.read(ids_sm, return_meta=True)
+    ts_st, meta_st = ISMN_stack.read(ids_st, return_meta=True)
+
+    return [ts_sm, meta_sm, ts_st, meta_st ]

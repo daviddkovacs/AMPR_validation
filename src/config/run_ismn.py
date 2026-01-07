@@ -8,7 +8,7 @@ import numpy as np
 from pandas import Timestamp,Timedelta
 from utilities.plotting import temp_sm_plot
 from config.paths import sat_stack_path,ismn_data_path, path_aux
-from utilities.retrieval_helpers import retrieve_LPRM,tiff_df
+from utilities.retrieval_helpers import retrieve_LPRM,tiff_df, get_ISMN_data
 from utilities.utils import local_solar_time,get_dates
 import itertools
 import pandas as pd
@@ -120,20 +120,7 @@ def temperature_distribution(satellite_data,
                 method = "nearest"
             ).expand_dims(['LAT','LON']).to_dataframe()
 
-    base_coniditons = (
-        (ISMN_stack.metadata['instrument'].depth_from >= depth_selection["start"]) &
-        (ISMN_stack.metadata['instrument'].depth_to < depth_selection["end"]) &
-        (ISMN_stack.metadata["timerange_to"].val > ts_cutoff + Timedelta(days=1)) &
-        (ISMN_stack.metadata['station'].val == station_user)
-    )
-
-    conditions_sm = base_coniditons & (ISMN_stack.metadata['variable'].val == 'soil_moisture')
-    conditions_st = base_coniditons & (ISMN_stack.metadata['variable'].val == 'soil_temperature')
-
-    ids_sm = ISMN_stack.metadata[conditions_sm].index.to_list()
-    ids_st = ISMN_stack.metadata[conditions_st].index.to_list()
-    ts_sm, meta_sm = ISMN_stack.read(ids_sm, return_meta=True)
-    ts_st, meta_st = ISMN_stack.read(ids_st, return_meta=True)
+    ts_sm, meta_sm, ts_st, meta_st = get_ISMN_data(ISMN_stack,site)
 
     aux_df = tiff_df(path_aux)
     T_soil_range = np.arange(273,330,1)
