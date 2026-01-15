@@ -206,5 +206,5 @@ dt_ori_ds = xr.concat(dt_original_ts, dim="time",join='outer')
 
 ##
 
-save_nc(dt_ori_ds,"/home/ddkovacs/Desktop/personal/daytime_retrievals/datasets/dt_ori_ds_day.nc")
+# save_nc(dt_ori_ds,"/home/ddkovacs/Desktop/personal/daytime_retrievals/datasets/dt_ori_ds_day.nc")
 

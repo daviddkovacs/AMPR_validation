@@ -1,3 +1,15 @@
+import sys
+import os
+
+# Get the absolute path of the directory containing this script (src/config)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Get the parent directory (src)
+parent_dir = os.path.dirname(current_dir)
+
+# Add the parent directory to sys.path if it's not there
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
 import datetime
 import os
 import pandas as pd
@@ -32,6 +44,7 @@ import lprm.retrieval.lprm_v6_1.par100m_v6_1 as par100
 from lprm.retrieval.lprm_general import load_aux_file
 from lprm.retrieval.lprm_v6_1.parameters import get_lprm_parameters_for_frequency
 from lprm.satellite_specs import get_specs
+from utilities.run_lprm import run_band
 
 
 bt_path = "/home/ddkovacs/shares/climers/Projects/CCIplus_Soil_Moisture/07_data/LPRM/passive_input/coarse_resolution/"
@@ -49,7 +62,7 @@ datelist = get_dates(start_date, end_date, freq = "D")
 avg_dict= {}
 std_dict = {}
 
-for sat_band in list(frequencies.keys())[0:4]: # Set this to the index which Freq. u want
+for sat_band in list(frequencies.keys())[0:1]: # Set this to the index which Freq. u want
     avg_list = []
     std_list = []
     for d in datelist:
@@ -71,7 +84,7 @@ for sat_band in list(frequencies.keys())[0:4]: # Set this to the index which Fre
         params = get_lprm_parameters_for_frequency(sat_band, specs.incidence_angle)
         freq = get_specs(sensor.upper()).frequencies[sat_band.upper()]
 
-        sm, vod, T_s_theory, T_c_theory = par100.run_band(
+        sm, vod,_,_= run_band(
             Tbv.values.astype('double'),
             Tbh.values.astype('double'),
             Teff.values.astype('double'),
@@ -80,7 +93,7 @@ for sat_band in list(frequencies.keys())[0:4]: # Set this to the index which Fre
             BLD,
             params.Q,
             params.w,
-            params.opt_atm,
+            0,
             specs.incidence_angle[0],
             params.h1,
             params.h2,
@@ -91,6 +104,8 @@ for sat_band in list(frequencies.keys())[0:4]: # Set this to the index which Fre
             False,
             None,
         )
+        # smrun = np.array(smrun)
+        # opt_run = np.array(opt_run)
         sm  = xr.where(sm>0,sm,np.nan)
         dataset = xr.DataArray(
             data=sm,
@@ -102,73 +117,53 @@ for sat_band in list(frequencies.keys())[0:4]: # Set this to the index which Fre
         vod  = np.where(vod>0,vod,np.nan)
 
         dataset["vod"] = (("lat", "lon"),vod )
-        dataset["T_c_theory"] = (("lat", "lon"),T_c_theory )
-        dataset["T_s_theory"] = (("lat", "lon"),T_s_theory )
 
-        T_c_delta = Teff - dataset["T_c_theory"]
-        T_s_delta = Teff - dataset["T_s_theory"]
-
-        soil_deltas = xr.where(mpdi(Tbv,Tbh)>= 0.1, T_s_delta, np.nan)
-        canopy_deltas = xr.where(mpdi(Tbv,Tbh)<= 0.005, T_c_delta, np.nan)
-
-        selector = {"soil_only" : soil_deltas,
-                    "canopy_only": canopy_deltas,}
-        plot_data = selector[pixel_type]
-
-        avg = np.nanmean(plot_data)
-        print(d)
-        avg_list.append(avg)
-        print(f"avg: {avg}")
-
-        std = np.nanstd(plot_data)
-        std_list.append(std)
-        print(f"std: {std}")
-        print("---")
-
-        # plt.figure()
-        # ax = plt.gca()
-        # plot_data.plot(ax=ax,vmin=-10, vmax=10)
-        # def format_coord(x, y):
-        #     try:
-        #         val = plot_data.sel(lon=x, lat=y, method="nearest").values
-        #         return f"x={x:.4f}, y={y:.4f}, value={val:.4f}"
-        #     except:
-        #         return f"x={x:.4f}, y={y:.4f}"
-        # ax.format_coord = format_coord
-        # plt.show()
+        plt.figure()
+        ax = plt.gca()
+        dataset["sm"].plot(ax=ax,vmin=0, vmax=1)
+        def format_coord(x, y):
+            try:
+                val = dataset["sm"].sel(lon=x, lat=y, method="nearest").values
+                return f"x={x:.4f}, y={y:.4f}, value={val:.4f}"
+            except:
+                return f"x={x:.4f}, y={y:.4f}"
+        ax.format_coord = format_coord
+        plt.show()
 
     avg_dict[sat_band] = avg_list
     std_dict[sat_band] = std_list
 
 
+
+
 ##
-x = np.array(datelist)
-
-plt.figure(figsize=(12, 7))
-
-for band in avg_dict.keys():
-    y = np.array(avg_dict[band])
-    std = np.array(std_dict[band])
-
-    p = plt.plot(x, y, label=band, linewidth=2)
-    color = p[0].get_color()
-
-    plt.fill_between(
-        x,
-        y - (std / 2),
-        y + (std / 2),
-        color=color,
-        alpha=0.2,  # Lower alpha for overlap visibility
-        edgecolor=None  # Removes border around the shade for a cleaner look
-    )
-
-plt.title(f"Time Series delta T {pixel_type}")
-plt.ylabel("$T_{Ka}$ - $T_{theory}$")  # Assuming dB based on typical backscatter data
-plt.legend(loc='best')  # Automatically finds the best spot for the legend
-plt.grid(True, alpha=0.3)
-
-# Rotate dates
-plt.xticks(rotation=45, ha='right')
-
-plt.tight_layout()
-plt.show()
+# x = np.array(datelist)
+#
+# plt.figure(figsize=(12, 7))
+#
+# for band in avg_dict.keys():
+#     y = np.array(avg_dict[band])
+#     std = np.array(std_dict[band])
+#
+#     p = plt.plot(x, y, label=band, linewidth=2)
+#     color = p[0].get_color()
+#
+#     plt.fill_between(
+#         x,
+#         y - (std / 2),
+#         y + (std / 2),
+#         color=color,
+#         alpha=0.2,  # Lower alpha for overlap visibility
+#         edgecolor=None  # Removes border around the shade for a cleaner look
+#     )
+#
+# plt.title(f"Time Series delta T {pixel_type}")
+# plt.ylabel("$T_{Ka}$ - $T_{theory}$")  # Assuming dB based on typical backscatter data
+# plt.legend(loc='best')  # Automatically finds the best spot for the legend
+# plt.grid(True, alpha=0.3)
+#
+# # Rotate dates
+# plt.xticks(rotation=45, ha='right')
+#
+# plt.tight_layout()
+# plt.show()
