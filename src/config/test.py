@@ -7,7 +7,7 @@ from readers.Sat import BTData, LPRMData
 from scipy.stats import gaussian_kde
 import matplotlib
 import numpy as np
-matplotlib.use("Qt5Agg")
+matplotlib.use("TkAgg")
 import xarray as xr
 import matplotlib.pyplot as plt
 from lprm.retrieval.lprm_v6_1.parameters import get_lprm_parameters_for_frequency
@@ -17,14 +17,14 @@ from shapely.geometry import LineString,  Point
 from lprm.retrieval.lprm_v6_1.run_lprmv6 import load_band_from_ds
 
 year = "2024"
-sat_band = "C1"
+sat_band = "X"
 frequencies={'C1': 6.9, 'C2': 7.3, 'X': 10.7,'KU': 18.7, 'K': 23.8, 'Ka': 36.5}
 sat_sensor = "amsr2"
 bbox = [
-    15.283018365134978,
-    -21.25120683446025,
-    26.47320491849186,
-    -10.777343049931744
+    -164.37219291310385,
+    -51.95094634103142,
+    183.7489370276607,
+    70.75914606353328
   ]
 
 bt_path = os.path.join(path_bt,"day",f"{year}*", f"*day_{year}*.nc")
@@ -52,7 +52,7 @@ df = pd.DataFrame({"BTV" : BTV,
 
 df["kuka"] = df["KuH"] / df["KaV"]
 df["mpdi"] = ((df["BTV"] - df["BTH"]) / (df["BTV"] + df["BTH"]))
-df["TeffKa"] = df["KaV"] *0.893 +44.8
+df["TeffKa"] = bt_data["bt_36.5V"].isel(time = 0,drop=True).values.flatten() * 0.893 + 44.8
 df["Teff"] = ((0.893*df["KuH"]) / (1- (df["mpdi"]/0.58))) + 44.8
 df = df.dropna(how="any")
 
@@ -94,7 +94,6 @@ def hexbin_plot(x, y,
             label="RANSAC regressor",
         )
         m, c = np.polyfit(line_x_ransac.ravel(), line_y_ransac,1)
-        ax.plot(x, m * x + c, color='red', alpha =0.7,linestyle='--', linewidth=2)
         fig.suptitle(f"slope: {np.round(m, 2)}, intercept: {np.round(c, 2)}")
 
     if plot_1to1:
@@ -148,27 +147,45 @@ hexbin_plot(df["kuka"].values,
             xlabel = f"Ku H / Ka V",
             ylabel = f"mpdi_{sat_band}",
             plot_polyfit=True,
-            xlim = [0.7,1.1],
-            ylim = [0,0.2],
+            # color_array=
+            # plot_TeffKa=True
+            # xlim = [0.2,1.1],
+            # ylim = [0,0.2],
             )
 
-# hexbin_plot(df["mpdi"].values,
-#             df["Teff"].values,
+# hexbin_plot(df["TeffKa"].values,
+#             df["mpdi"].values,
 #             type = "log",
 #             xlabel = f"Teff Ka",
-#             ylabel = f"Teff X",
+#             ylabel = f"mpdi",
 #             # plot_1to1=True,
 #             # xlim = [270,330],
 #             # ylim = [270,330],
 #             # color_array=df["mpdi"].values
-#             plot_TeffKa=True
+#             # plot_TeffKa=True
 #             )
 
 ##
-# plt.plot(slope_list,label = "Slope")
-# plt.plot(intercept_list, label = "Intercept")
-# plt.title(f"{sat_band} band\nmean slope: {np.round(np.nanmean(slope_list),2)},  mean intercept: {np.round(np.nanmean(intercept_list),2)}")
-# plt.xlabel("DOY (2024)")
-# plt.ylim([-0.9,0.9])
-# plt.legend()
-# plt.show()
+xr_v = bt_data[f"bt_{frequencies[sat_band]}V"].isel(time = 0)
+xr_h = bt_data[f"bt_{frequencies[sat_band]}H"].isel(time = 0)
+mpdi = ((xr_v - xr_h) / (xr_v + xr_h))
+
+xr_kuh = bt_data["bt_18.7H"].isel(time = 0)
+xr_kav = bt_data["bt_36.5V"].isel(time = 0)
+TeffKa =xr_kav * 0.893 + 44.8
+Teff = ((0.893*xr_kuh) / (1- (mpdi/0.58))) + 44.8
+
+plt.figure()
+Teff.plot(label = "Teff",vmin = 270,vmax = 330)
+plt.title("Teff")
+plt.show()
+
+plt.figure()
+TeffKa.plot(label = "Teff Ka",vmin = 270,vmax = 330)
+plt.title("Teff Ka")
+plt.show()
+
+plt.figure()
+(TeffKa - Teff).plot(label = "Teff Ka", vmin = -30,vmax = 30,cmap = "coolwarm")
+plt.title("Teff Ka - Teff")
+plt.show()

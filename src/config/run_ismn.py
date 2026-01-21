@@ -201,7 +201,7 @@ def temperature_distribution(satellite_day,
                     logger["Soil"].append(T_soil_i)
                     logger["Canopy"].append(T_canopy_i)
                     logger["SM"].append(SM_i)
-                    logger["dif"].append(SM_target - SM_i)
+                    logger["dif"].append(SM_i - SM_target)
 
                 df_logger = pd.DataFrame(logger).sort_values(by="dif", key=abs)
 
@@ -261,11 +261,11 @@ station_user = 'BeasleyLake'
 
 if __name__ == "__main__":
 
-    run_ismn_multi_site(satellite_data=sat_day,
-                        ISMN_instance=ISMN_stack,
-                        sites=  [station_user],
-                        ts_cutoff=ts_cutoff,
-                        depth_selection=depth_selection)
+    # run_ismn_multi_site(satellite_data=sat_day,
+    #                     ISMN_instance=ISMN_stack,
+    #                     sites=  [station_user],
+    #                     ts_cutoff=ts_cutoff,
+    #                     depth_selection=depth_selection)
 
     temperature_distribution(satellite_day=sat_day,
                              satellite_night=sat_night,
