@@ -172,9 +172,9 @@ def radiative_transfer(sm,
             Sand = sand[ir, ic]
             Clay = clay[ir, ic]
             BulkDensity = bulk_density[ir, ic]
+            sm_pixel = sm[ir, ic]
+            vod_pixel = vod[ir, ic]
             T = Temperature[ir, ic]
-            # TBv = Vertical_polarized_BT[ir, ic]
-            # TBh = Horizontal_polarized_BT[ir, ic]
             print(Clay)
 
             if T > temp_freeze and BulkDensity > 0:
@@ -212,7 +212,7 @@ def radiative_transfer(sm,
                 ex2real = eice_real + (ewater_real - eice_real) * y
                 ex2imag = eice_imag + (ewater_imag - eice_imag) * y
 
-                smrun2 = sm
+                smrun2 = sm_pixel
                 vart = (smrun2 / Wt) * y
                 ex1real = eice_real + ew2real * vart
                 ex1imag = eice_imag + ew2imag * vart
@@ -242,12 +242,18 @@ def radiative_transfer(sm,
                 # else:
                 k = np.sqrt(ereal**2+eimag**2)
 
-                SM_val = h2 * Porosity * -1.
-                # New roughness formulation, goes to zero at Porosity
-                if smrun2 > (SM_val):
-                    fact = 1.0 - (smrun2 - SM_val)/(Porosity - SM_val)
+                # if vegetation_correction:
+                #     h = h1 * (Av + Bv * VODo - 2.0 * Av * smrun2[i3])
+                #     h = max(ttt, h)
+                if h2 >= 0:
+                    h = h1 - smrun2 * h2
                 else:
-                    fact = 1.0
+                    SM_val = h2 * Porosity * -1.
+                    # New roughness formulation, goes to zero at Porosity
+                    if smrun2 > (SM_val):
+                        fact = 1.0 - (smrun2 - SM_val) / (Porosity - SM_val)
+                    else:
+                        fact = 1.0
 
                     h = h1 * fact
                 h = max(0, h)
@@ -269,7 +275,7 @@ def radiative_transfer(sm,
 
                 # a = 0.5 * ((emissivity_v - emissivity_h) / mpdi_l - emissivity_v - emissivity_h)
                 # opt = max(cos_u * np.log(a * d + np.sqrt((a * d) ** 2 + a + 1)), 0)
-                opt = vod
+                opt = vod_pixel
                 trans_v = math.exp(-opt / cos_u)
 
                 TbH_sim = T * emissivity_h * trans_v + (1 - single_scat_a) * T * (1 - trans_v) + (
@@ -284,4 +290,4 @@ def radiative_transfer(sm,
                 TbH_sim = np.nan
                 TbV_sim = np.nan
 
-        return TbH_sim, TbV_sim,smrun2, opt, T
+    return TbH_sim, TbV_sim,smrun2, opt, T
