@@ -9,8 +9,10 @@ import rioxarray
 import pandas as pd
 from shapely.geometry.multilinestring import MultiLineString
 from pandas import Timestamp,Timedelta
-
+from config.paths import path_bt
 from utilities.utils import bbox
+import glob
+import xarray as xr
 
 def soil_canopy_temperatures(point_x,
                              point_y,
@@ -181,3 +183,17 @@ def get_ISMN_data(ISMN_stack,
     ts_st, meta_st = ISMN_stack.read(ids_st, return_meta=True)
 
     return [ts_sm, meta_sm, ts_st, meta_st ]
+
+
+def get_coords(path_nc =
+               "/home/ddkovacs/shares/climers/Projects/CCIplus_Soil_Moisture/07_data/"
+               "LPRM/01_resampled_bt/coarse_resolution/AMSR2/day/201208/amsr2_l1bt_day_20120802_25km.nc"):
+
+    bt_path = os.path.join(path_nc)
+
+    bt_data = xr.open_dataset(bt_path, decode_timedelta=False)
+
+    dims_coords = {"dims":  bt_data["bt_23.8H"].dims,
+                   "coords": bt_data["bt_23.8H"].drop_vars("time").coords }
+
+    return dims_coords

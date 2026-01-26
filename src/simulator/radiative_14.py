@@ -1,20 +1,18 @@
 import os
 import glob
-
 from dask.array import block
-
 from config.paths import path_bt
 import matplotlib
 import numpy as np
 from sklearn.linear_model import HuberRegressor
-
 import xarray as xr
 import matplotlib.pyplot as plt
 from lprm.retrieval.lprm_v6_1.parameters import get_lprm_parameters_for_frequency
 from lprm.satellite_specs import get_specs
 from simulator.radiative_transfer_lprm import radiative_transfer
-matplotlib.use("TkAgg")
 from osgeo import gdal
+from utilities.retrieval_helpers import get_coords
+matplotlib.use("TkAgg")
 
 sat_band = "C1"
 frequencies={'C1': 6.9, 'C2': 7.3, 'X': 10.7,'KU': 18.7, 'K': 23.8, 'KA': 36.5}
@@ -29,15 +27,6 @@ def auxdata(string_type):
     array = tif_data.GetRasterBand(1).ReadAsArray().astype(float)
     return array
 
-
-year = "2024"
-bt_path = os.path.join(path_bt,"day",f"{year}*", f"*day_{year}*.nc")
-bt_files = glob.glob(bt_path)
-
-bt_data = xr.open_dataset(bt_files[110], decode_timedelta=False)
-da_d = bt_data["bt_23.8H"].dims
-da_c = bt_data["bt_23.8H"].drop_vars("time").coords
-
 lats = 720
 lons = 1440
 
@@ -49,14 +38,41 @@ bbox =  [
   ]
 
 number_simulations = 50
+
 sm_i = np.linspace(0.01,1,number_simulations)
 vod_i = np.linspace(0.02,1.5,number_simulations)
 t_i = np.linspace(270,330,number_simulations)
 iterations = np.arange(0, number_simulations,1)
 
-sm_stack =   sm_i[None, None,:] * np.ones((lats,lons,len(sm_i)))
-vod_stack =   vod_i[None, None,:] * np.ones((lats,lons,len(vod_i)))
-t_stack =   t_i[None, None,:] * np.ones((lats,lons,len(vod_i)))
+sm_dummy = xr.DataArray(
+    data= sm_i[None, None,:] * np.ones((lats,lons,len(sm_i))), # sm_stack
+    dims=["lat","lon","i"],
+    coords= dict(
+        lat =  get_coords()["coords"]["lat"],
+        lon = get_coords()["coords"]["lon"],
+        i =  sm_i
+    )
+)
+
+vod_dummy = xr.DataArray(
+    data= vod_i[None, None,:] * np.ones((lats,lons,len(vod_i))), # vod_stack
+    dims=["lat","lon","i"],
+    coords= dict(
+        lat =  get_coords()["coords"]["lat"],
+        lon = get_coords()["coords"]["lon"],
+        i =  vod_i
+    )
+)
+
+t_dummy = xr.DataArray(
+    data= t_i[None, None,:] * np.ones((lats,lons,len(vod_i))), # t_stack
+    dims=["lat","lon","i"],
+    coords= dict(
+        lat =  get_coords()["coords"]["lat"],
+        lon = get_coords()["coords"]["lon"],
+        i =  t_i
+    )
+)
 
 sm_cons = 0.01
 vod_cons = 0.01
@@ -64,29 +80,26 @@ t_cons = 313
 
 i_variable = "sm"
 
-da_list = []
-da_dict = {}
 opt_sim_list = []
 m_list = []
 c_list = []
 
 for i in range(0,len(iterations)):
-    print(i)
     try:
         if i_variable.lower() == "sm":
-            sm_slice = sm_stack[:,:,i]
+            sm_slice = sm_dummy[:,:,i]
             vod_slice = np.full((lats,lons), vod_cons)
             t_slice = np.full((lats,lons), t_cons)
 
         elif i_variable.lower() == "vod":
             sm_slice =  np.full((lats,lons), sm_cons)
-            vod_slice = vod_stack[:,:,i]
+            vod_slice = vod_dummy[:,:,i]
             t_slice = np.full((lats,lons), t_cons)
 
         elif i_variable.lower() == "t":
             sm_slice =  np.full((lats,lons), sm_cons)
             vod_slice = np.full((lats, lons), vod_cons)
-            t_slice = t_stack[:,:,i]
+            t_slice = t_dummy[:,:,i]
 
         else:
             raise Exception
@@ -123,7 +136,7 @@ for i in range(0,len(iterations)):
                 # T_soil=(("lat", "lon"), T_soil),
                 # T_canopy=(("lat", "lon"), T_canopy),
             ),
-            coords=da_c,
+            coords= get_coords()["coords"],
         ).expand_dims(i=[i])
 
         da = da.sel(lat=slice(bbox[3], bbox[1]),
@@ -131,8 +144,6 @@ for i in range(0,len(iterations)):
 
         mpdi = ((TbV_sim - TbH_sim) / (TbV_sim + TbH_sim)).flatten()
         Tb_ratio = (TbH_sim / TbV_sim).flatten()
-
-        opt_sim_list.append(np.nanmean(opt_sim))
 
         X = Tb_ratio.reshape(-1, 1)
         y = mpdi
@@ -148,6 +159,7 @@ for i in range(0,len(iterations)):
         m = np.where(abs(m) > 0.1, m, np.nan)
         c = np.where(abs(c) > 0.1, c, np.nan)
 
+        opt_sim_list.append(np.nanmean(opt_sim))
         m_list.append(m)
         c_list.append(c)
         print(f"succes data: {i}")
@@ -168,7 +180,7 @@ title  = {"vod": f"constants sm: {sm_cons} T: {t_cons}",
 ##
 plt.figure()
 plt.plot(var_dict[i_variable],m_list, label = "gradient")
-plt.plot(var_dict[i_variable],opt_sim_list, label = "opt")
+# plt.plot(var_dict[i_variable],opt_sim_list, label = "opt")
 plt.plot(var_dict[i_variable],c_list, label ="intercept")
 plt.xlabel(i_variable)
 plt.legend()
