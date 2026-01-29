@@ -102,6 +102,18 @@ if __name__=="__main__":
     lat_bins = np.digitize(SLSTR_obs.lat, TSURF.lat)
     lon_bins = np.digitize(SLSTR_obs.lon, TSURF.lon)
 
+    target_lat_bin = 5
+    target_lon_bin = 5
+
+    # 3. Create a boolean mask where the fine pixels match that specific bin
+    mask = (lat_bins == target_lat_bin) & (lon_bins == target_lon_bin)
+
+    # 4. Extract the SLSTR pixels
+    # We use .where() to keep the spatial structure, or just select values
+    pixels_within = SLSTR_obs["LST"].where(xr.DataArray(mask, coords=SLSTR_obs.coords), drop=True)
+    plt.figure()
+    plt.imshow(pixels_within)
+    plt.show()
 ##
     soil_plot_params = {"x": "lon",
                        "y":"lat",
