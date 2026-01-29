@@ -117,39 +117,6 @@ def open_sltsr(path,
     return dataset
 
 
-def plot_lst(left_da,
-             right_da,
-             left_params,
-             right_params,
-             ):
-
-    pd.to_datetime(left_da.time.values)
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6), constrained_layout=True)
-
-    obs_date = pd.to_datetime(left_da.time.values)
-
-    left_da.plot(
-        x=left_params["x"],
-        y=left_params["y"],
-        ax=ax1,
-        cmap=left_params["cmap"],
-        cbar_kwargs=left_params["cbar_kwargs"],
-        vmin=left_params["vmin"]
-    )
-    ax1.set_title(left_params["title"])
-
-    right_da.plot(
-        x=right_params["x"],
-        y=right_params["y"],
-        ax=ax2,
-        cmap=right_params["cmap"],
-        cbar_kwargs=right_params["cbar_kwargs"],
-        vmin=right_params["vmin"],
-        vmax=right_params["vmax"]
-    )
-    ax2.set_title(right_params["title"])
-    plt.suptitle(f"Sentinel-3 SLSTR\n{obs_date}")
-    plt.show()
 
 
 def cloud_filtering(dataset,

@@ -1,0 +1,98 @@
+import glob
+import re
+from functools import partial
+import numpy as np
+import xarray as xr
+import os
+from xarray import apply_ufunc
+from config.paths import NDVI_path, SLSTR_path
+import pandas as pd
+from datetime import datetime
+from NDVI_utils import filternan
+import matplotlib
+import matplotlib.pyplot as plt
+matplotlib.use("TkAgg")
+
+def plot_lst(left_da,
+             right_da,
+             left_params,
+             right_params,
+             ):
+
+    pd.to_datetime(left_da.time.values)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6), constrained_layout=True)
+
+    obs_date = pd.to_datetime(left_da.time.values)
+
+    left_da.plot(
+        x=left_params["x"],
+        y=left_params["y"],
+        ax=ax1,
+        cmap=left_params["cmap"],
+        cbar_kwargs=left_params["cbar_kwargs"],
+        vmin=left_params["vmin"]
+    )
+    ax1.set_title(left_params["title"])
+
+    right_da.plot(
+        x=right_params["x"],
+        y=right_params["y"],
+        ax=ax2,
+        cmap=right_params["cmap"],
+        cbar_kwargs=right_params["cbar_kwargs"],
+        vmin=right_params["vmin"],
+        vmax=right_params["vmax"]
+    )
+    ax2.set_title(right_params["title"])
+    plt.suptitle(f"Sentinel-3 SLSTR\n{obs_date}")
+    plt.show()
+
+
+def plot_amsr2(ds,
+               plot_params):
+
+    plt.figure()
+    ds.plot(
+        cmap= plot_params["cmap"],
+        cbar_kwargs=plot_params["cbar_kwargs"],
+        vmin=plot_params["vmin"],
+        vmax=plot_params["vmax"]
+    )
+    plt.title(f"AMSR2 $T_{{surface}}$\n {plot_params["title"]}")
+    plt.show()
+
+
+def boxplot_soil_veg(soil, veg, ndvi_thres=0.3):
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+    ax1.hist(filternan(soil),
+             bins=200,
+             alpha=0.8,
+             label=f"$T_{{soil}}$ (NDVI < {ndvi_thres})",
+             color="brown")
+    ax1.hist(filternan(veg),
+             bins=200,
+             alpha=0.7,
+             label=f"$T_{{vegetation}}$ (NDVI > {ndvi_thres})",
+             color="green")
+    ax1.set_xlabel("$T$ [K]")
+    ax1.set_ylabel("frequency")
+    ax1.set_title("Temp Distribution")
+    ax1.legend(loc="upper left")
+
+    data_to_plot = [filternan(soil), filternan(veg)]
+    bp = ax2.boxplot(data_to_plot,
+                     patch_artist=True,
+                     showfliers=False,
+                     tick_labels=[f"Soil", f"Veg"])
+
+    colors = ["brown", "green"]
+    for patch, color in zip(bp['boxes'], colors):
+        patch.set_facecolor(color)
+        patch.set_alpha(0.7)
+
+    ax2.set_ylabel("$T$ [K]")
+    ax2.set_title("Soil/Veg. Temp Boxplot")
+
+    plt.tight_layout()
+    plt.show()

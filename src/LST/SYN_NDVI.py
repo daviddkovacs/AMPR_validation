@@ -5,14 +5,13 @@ import numpy as np
 from NDVI_utils import (open_sltsr,
                         open_amsr2,
                         filter_empty_var,
-                        plot_lst, crop2roi,
+                        crop2roi,
                         filternan,
                         cloud_filtering)
+from plot_functions import plot_lst, plot_amsr2, boxplot_soil_veg
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use("TkAgg")
-
-##
 
 
 if __name__=="__main__":
@@ -49,17 +48,22 @@ if __name__=="__main__":
     SLSTR = filter_empty_var(_SLSTR, "NDVI") # Filter empty NDVI obs
 
     ##
-    date = "2024-07-25"
+    date = "2024-08-25"
 
     bbox = [
-    -107.79360536401147,
-    33.308332423254896,
-    -97.7708702338834,
-    40.160182398589114
+    -107.36541307233212,
+    33.74476707279476,
+    -98.17844652268263,
+    38.48822222584974
   ]
     ndvi_thres =0.3
+
     SLSTR_obs = SLSTR.sel(time=date, method="nearest")
     SLSTR_obs = crop2roi(SLSTR_obs.compute(),bbox)
+
+    AMSR2_obs = AMSR2.sel(time=date, method="nearest")
+    AMSR2_obs = crop2roi(AMSR2_obs.compute(),bbox)
+    TSURF = AMSR2_obs["bt_36.5V"] * 0.893 + 44.8
 
     veg_temp = xr.where(SLSTR_obs["NDVI"]>ndvi_thres,SLSTR_obs["LST"], np.nan)
     soil_temp = xr.where(SLSTR_obs["NDVI"]<ndvi_thres,SLSTR_obs["LST"], np.nan)
@@ -80,14 +84,25 @@ if __name__=="__main__":
                         "vmax" : 0.6,
                         "title" :"NDVI"
                        }
+    AMSR2_plot_params = {
+                        "cmap":"coolwarm",
+                        "cbar_kwargs":{'label': 'LST [K]'},
+                        "vmin": 290,
+                        "vmax": 320,
+        "title" : np.datetime_as_string(AMSR2_obs.time.values, unit='D')
+                       }
 
     plot_lst(left_da = SLSTR_obs["LST"],
              right_da = SLSTR_obs["NDVI"],
              left_params=LST_plot_params,
              right_params= NDVI_plot_params)
 
-##
+    plot_amsr2(TSURF,AMSR2_plot_params)
 
+    lat_bins = np.digitize(SLSTR_obs.lat, TSURF.lat)
+    lon_bins = np.digitize(SLSTR_obs.lon, TSURF.lon)
+
+##
     soil_plot_params = {"x": "lon",
                        "y":"lat",
                        "cmap":"coolwarm",
@@ -112,37 +127,4 @@ if __name__=="__main__":
              right_params= soil_plot_params)
 
 ##
-
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-
-ax1.hist(filternan(soil_temp),
-         bins=200,
-         alpha=0.8,
-         label=f"$T_{{soil}}$ (NDVI < {ndvi_thres})",
-         color="brown")
-ax1.hist(filternan(veg_temp),
-         bins=200,
-         alpha=0.7,
-         label=f"$T_{{vegetation}}$ (NDVI > {ndvi_thres})",
-         color="green")
-ax1.set_xlabel("$T$ [K]")
-ax1.set_ylabel("frequency")
-ax1.set_title("Temp Distribution")
-ax1.legend(loc="upper left")
-
-data_to_plot = [filternan(soil_temp), filternan(veg_temp)]
-bp = ax2.boxplot(data_to_plot,
-                 patch_artist=True,
-                 showfliers = False,
-                 tick_labels=[f"Soil", f"Veg"])
-
-colors = ["brown", "green"]
-for patch, color in zip(bp['boxes'], colors):
-    patch.set_facecolor(color)
-    patch.set_alpha(0.7)
-
-ax2.set_ylabel("$T$ [K]")
-ax2.set_title("Soil/Veg. Temp Boxplot")
-
-plt.tight_layout()
-plt.show()
+    boxplot_soil_veg(soil_temp,veg_temp,ndvi_thres)
