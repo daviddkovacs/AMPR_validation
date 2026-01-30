@@ -5,7 +5,7 @@ import numpy as np
 import xarray as xr
 import os
 from xarray import apply_ufunc
-from config.paths import NDVI_path, SLSTR_path
+from config.paths import SLSTR_path
 import pandas as pd
 from datetime import datetime
 from NDVI_utils import filternan
@@ -62,16 +62,20 @@ def plot_amsr2(ds,
     plt.show()
 
 
-def boxplot_soil_veg(soil, veg, ndvi_thres=0.3):
+def boxplot_soil_veg(soil, veg, ndvi_thres=0.3, bins =100):
+
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
+    _soil = filternan(soil)
+    _veg = filternan(veg)
+
     ax1.hist(filternan(soil),
-             bins=200,
+             bins=bins,
              alpha=0.8,
              label=f"$T_{{soil}}$ (NDVI < {ndvi_thres})",
              color="brown")
-    ax1.hist(filternan(veg),
-             bins=200,
+    ax1.hist(_veg,
+             bins=bins,
              alpha=0.7,
              label=f"$T_{{vegetation}}$ (NDVI > {ndvi_thres})",
              color="green")

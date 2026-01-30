@@ -8,10 +8,18 @@ import numpy as np
 import xarray as xr
 import os
 from xarray import apply_ufunc
-from config.paths import NDVI_path, SLSTR_path
+from config.paths import  SLSTR_path
 import pandas as pd
 from datetime import datetime
 
+def threshold_ndvi(lst, ndvi, ndvi_thres=0.3):
+    """
+    Simple thresholding of Soil-Veg to get different temps.
+    """
+    veg_temp = xr.where(ndvi >ndvi_thres, lst, np.nan)
+    soil_temp = xr.where(ndvi <ndvi_thres, lst, np.nan)
+
+    return soil_temp, veg_temp
 
 def crop2roi(ds,bbox):
     mask = (
@@ -50,7 +58,7 @@ def open_amsr2(path,
                time_stop = "2025-01-01",
                ):
 
-    folder = os.path.join(path,sensor,overpass,subdir_pattern,file_pattern)
+    folder = os.path.join(r"G:\My Drive\Munka\CLIMERS\ER2_validation\AMSR2\passive_input\coarse_resolution",overpass,subdir_pattern,file_pattern)
 
     files = glob.glob(folder)
 
@@ -65,7 +73,8 @@ def open_amsr2(path,
                                 combine ="nested",
                                 join = "outer",
                                 concat_dim = "time",
-                                chunks = "auto").assign_coords(time = _dates[date_mask])
+                                chunks = "auto",
+                                decode_timedelta = False).assign_coords(time = _dates[date_mask])
 
     print(f"Loading dataset finished (AMSR2)")
 
@@ -94,7 +103,9 @@ def open_sltsr(path,
                                 combine ="nested",
                                 join = "outer",
                                 concat_dim = "time",
-                                chunks = "auto").assign_coords(time = dates_dt)
+                                chunks = "auto",
+                                decode_timedelta=False,
+                                ).assign_coords(time = dates_dt)
 
     if georeference_file: # L1 and L2 SLSTR data isnt gridded. lat, lon from external file!
 
@@ -106,7 +117,9 @@ def open_sltsr(path,
                                 combine="nested",
                                 join="outer",
                                 concat_dim="time",
-                                chunks="auto").assign_coords(time = dates_dt)
+                                chunks="auto",
+                                decode_timedelta=False,
+                                ).assign_coords(time = dates_dt)
 
         dataset = dataset.assign_coords(
             lat=(("time", "rows", "columns"), geo.latitude_in.data),
@@ -159,3 +172,16 @@ def snow_filtering(dataset,
     snowy = xr.where(SNOWICE["biome"]==27, True, False)
 
     return xr.where(snowy, np.nan, dataset)
+
+def slstr_pixels_in_amsr2(slstr_da,
+                          amsr2_da,
+                          target_lat_bin,
+                          target_lon_bin):
+
+    lat_bins = np.digitize(slstr_da.lat.values, amsr2_da.lat.values)
+    lon_bins = np.digitize(slstr_da.lon.values, amsr2_da.lon.values)
+
+    mask = (lat_bins == target_lat_bin) & (lon_bins == target_lon_bin)
+    pixels_within = slstr_da.where(xr.DataArray(mask, coords=slstr_da.coords), drop=True)
+
+    return pixels_within

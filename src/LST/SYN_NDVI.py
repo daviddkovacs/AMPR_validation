@@ -6,8 +6,9 @@ from NDVI_utils import (open_sltsr,
                         open_amsr2,
                         filter_empty_var,
                         crop2roi,
-                        filternan,
-                        cloud_filtering)
+                        threshold_ndvi,
+                        cloud_filtering,
+                        slstr_pixels_in_amsr2)
 from plot_functions import plot_lst, plot_amsr2, boxplot_soil_veg
 import matplotlib
 import matplotlib.pyplot as plt
@@ -36,8 +37,8 @@ if __name__=="__main__":
                        subdir_pattern=f"20*",
                        file_pattern="amsr2_l1bt_*.nc",
                        date_pattern=r"_(\d{8})_",
-                       time_start="2024-01-01",
-                       time_stop="2025-01-01",
+                       time_start="2024-05-01",
+                       time_stop="2025-07-01",
                        )
 
     _SLSTR = xr.merge([NDVI,LST])[["LST","NDVI"]]
@@ -50,29 +51,28 @@ if __name__=="__main__":
     ##
     date = "2024-08-25"
 
-    bbox = [
-    -107.36541307233212,
-    33.74476707279476,
-    -98.17844652268263,
-    38.48822222584974
+    bbox =   [
+    -98.14778655230879,
+    35.62525958403951,
+    -97.3774255778045,
+    36.13940216587241
   ]
-    ndvi_thres =0.3
+    ndvi_thres =0.5
 
     SLSTR_obs = SLSTR.sel(time=date, method="nearest")
     SLSTR_obs = crop2roi(SLSTR_obs.compute(),bbox)
 
-    AMSR2_obs = AMSR2.sel(time=date, method="nearest")
+    AMSR2_obs = AMSR2.sortby('time').sel(time=date, method="nearest")
     AMSR2_obs = crop2roi(AMSR2_obs.compute(),bbox)
     TSURF = AMSR2_obs["bt_36.5V"] * 0.893 + 44.8
 
-    veg_temp = xr.where(SLSTR_obs["NDVI"]>ndvi_thres,SLSTR_obs["LST"], np.nan)
-    soil_temp = xr.where(SLSTR_obs["NDVI"]<ndvi_thres,SLSTR_obs["LST"], np.nan)
+    soil_temp, veg_temp = threshold_ndvi(lst = SLSTR_obs["LST"], ndvi = SLSTR_obs["NDVI"] ,ndvi_thres = ndvi_thres)
 
     LST_plot_params = {"x": "lon",
                        "y":"lat",
                        "cmap":"coolwarm",
                        "cbar_kwargs":{'label': 'LST [K]'},
-                       "vmin":273,
+                       "vmin":290,
                        "title": "LST"
                        }
     NDVI_plot_params = {
@@ -99,44 +99,53 @@ if __name__=="__main__":
 
     plot_amsr2(TSURF,AMSR2_plot_params)
 
-    lat_bins = np.digitize(SLSTR_obs.lat, TSURF.lat)
-    lon_bins = np.digitize(SLSTR_obs.lon, TSURF.lon)
+##
+    target_lat_bin = 2
+    target_lon_bin = 2
 
-    target_lat_bin = 5
-    target_lon_bin = 5
+    soil_subset = slstr_pixels_in_amsr2(soil_temp,
+                          TSURF,
+                          target_lat_bin,
+                          target_lon_bin)
 
-    # 3. Create a boolean mask where the fine pixels match that specific bin
-    mask = (lat_bins == target_lat_bin) & (lon_bins == target_lon_bin)
+    veg_subset =  slstr_pixels_in_amsr2(veg_temp,
+                          TSURF,
+                          target_lat_bin,
+                          target_lon_bin)
 
-    # 4. Extract the SLSTR pixels
-    # We use .where() to keep the spatial structure, or just select values
-    pixels_within = SLSTR_obs["LST"].where(xr.DataArray(mask, coords=SLSTR_obs.coords), drop=True)
     plt.figure()
-    plt.imshow(pixels_within)
+    soil_subset.plot(x="lon", y = "lat")
+    plt.title("Soil")
     plt.show()
-##
-    soil_plot_params = {"x": "lon",
-                       "y":"lat",
-                       "cmap":"coolwarm",
-                       "cbar_kwargs":{'label': 'Soil LST [K]'},
-                       "vmin":290,
-                        "vmax": 320,
-                        "title": "Soil (NDVI<0.3) LST"
-                       }
-    veg_plot_params = {
-                        "x":"lon",
-                        "y":"lat",
-                        "cmap":"coolwarm",
-                        "cbar_kwargs":{'label':"NDVI [-]"},
-                        "vmin" : 290,
-                        "vmax" : 320,
-                        "title" :"Veg. (NDVI>0.3) LST"
-                       }
+    plt.figure()
+    veg_subset.plot(x="lon", y = "lat")
+    plt.title("Vegetation")
+    plt.show()
 
-    plot_lst(left_da = veg_temp,
-             right_da = soil_temp,
-             left_params=veg_plot_params,
-             right_params= soil_plot_params)
+    boxplot_soil_veg(soil_subset,veg_subset,ndvi_thres)
 
 ##
-    boxplot_soil_veg(soil_temp,veg_temp,ndvi_thres)
+    # soil_plot_params = {"x": "lon",
+    #                    "y":"lat",
+    #                    "cmap":"coolwarm",
+    #                    "cbar_kwargs":{'label': 'Soil LST [K]'},
+    #                    "vmin":290,
+    #                     "vmax": 320,
+    #                     "title": "Soil (NDVI<0.3) LST"
+    #                    }
+    # veg_plot_params = {
+    #                     "x":"lon",
+    #                     "y":"lat",
+    #                     "cmap":"coolwarm",
+    #                     "cbar_kwargs":{'label':"NDVI [-]"},
+    #                     "vmin" : 290,
+    #                     "vmax" : 320,
+    #                     "title" :"Veg. (NDVI>0.3) LST"
+    #                    }
+    #
+    # plot_lst(left_da = veg_temp,
+    #          right_da = soil_temp,
+    #          left_params=veg_plot_params,
+    #          right_params= soil_plot_params)
+
+##
