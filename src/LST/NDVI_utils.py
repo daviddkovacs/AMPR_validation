@@ -47,6 +47,14 @@ def filter_empty_var(ds, var = "NDVI"):
     valid = ds[var].notnull().any(dim = ["rows","columns"])
     return ds.sel(time=valid)
 
+def subset_statistics(array):
+
+    _array = filternan(array)
+    stat_dict = {}
+    stat_dict["mean"], stat_dict["std"] = np.nanmean(_array), np.nanstd(_array)
+
+    return _array, stat_dict
+
 
 def open_amsr2(path,
                sensor,
@@ -173,15 +181,20 @@ def snow_filtering(dataset,
 
     return xr.where(snowy, np.nan, dataset)
 
+def binning_smaller_pixels(slstr_da,amsr2_da):
+
+    iterables = {}
+    iterables["lats"] = np.digitize(slstr_da.lat.values, amsr2_da.lat.values)
+    iterables["lons"] = np.digitize(slstr_da.lon.values, amsr2_da.lon.values)
+
+    return iterables
+
 def slstr_pixels_in_amsr2(slstr_da,
-                          amsr2_da,
+                          bin_dict,
                           target_lat_bin,
                           target_lon_bin):
 
-    lat_bins = np.digitize(slstr_da.lat.values, amsr2_da.lat.values)
-    lon_bins = np.digitize(slstr_da.lon.values, amsr2_da.lon.values)
-
-    mask = (lat_bins == target_lat_bin) & (lon_bins == target_lon_bin)
+    mask = (bin_dict["lats"]  == target_lat_bin) & (bin_dict["lons"]  == target_lon_bin)
     pixels_within = slstr_da.where(xr.DataArray(mask, coords=slstr_da.coords), drop=True)
 
     return pixels_within

@@ -8,7 +8,7 @@ from xarray import apply_ufunc
 from config.paths import SLSTR_path
 import pandas as pd
 from datetime import datetime
-from NDVI_utils import filternan
+from NDVI_utils import filternan, subset_statistics
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use("TkAgg")
@@ -62,19 +62,20 @@ def plot_amsr2(ds,
     plt.show()
 
 
-def boxplot_soil_veg(soil, veg, ndvi_thres=0.3, bins =100):
+
+def boxplot_soil_veg(soil, veg, ndvi_thres=0.3, bins =200):
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
-    _soil = filternan(soil)
-    _veg = filternan(veg)
+    soil_filtered, _ = subset_statistics(soil)
+    veg_filtered, _ = subset_statistics(veg)
 
-    ax1.hist(filternan(soil),
+    ax1.hist(soil_filtered,
              bins=bins,
              alpha=0.8,
              label=f"$T_{{soil}}$ (NDVI < {ndvi_thres})",
              color="brown")
-    ax1.hist(_veg,
+    ax1.hist(veg_filtered,
              bins=bins,
              alpha=0.7,
              label=f"$T_{{vegetation}}$ (NDVI > {ndvi_thres})",

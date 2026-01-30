@@ -8,7 +8,9 @@ from NDVI_utils import (open_sltsr,
                         crop2roi,
                         threshold_ndvi,
                         cloud_filtering,
-                        slstr_pixels_in_amsr2)
+                        slstr_pixels_in_amsr2,
+                        subset_statistics,
+                        binning_smaller_pixels)
 from plot_functions import plot_lst, plot_amsr2, boxplot_soil_veg
 import matplotlib
 import matplotlib.pyplot as plt
@@ -100,29 +102,66 @@ if __name__=="__main__":
     plot_amsr2(TSURF,AMSR2_plot_params)
 
 ##
-    target_lat_bin = 2
-    target_lon_bin = 2
+    # szerintem ebbol csinaljak majd egy functiont hetfon
 
-    soil_subset = slstr_pixels_in_amsr2(soil_temp,
-                          TSURF,
-                          target_lat_bin,
-                          target_lon_bin)
+    veg_mean_list = []
+    veg_std_list = []
 
-    veg_subset =  slstr_pixels_in_amsr2(veg_temp,
-                          TSURF,
-                          target_lat_bin,
-                          target_lon_bin)
+    soil_mean_list = []
+    soil_std_list = []
+
+    TSURF_list = []
+
+    bin_dict = binning_smaller_pixels(SLSTR_obs["NDVI"], TSURF)
+
+    for targetlon in np.unique(bin_dict["lons"]):
+        for targetlat in np.unique(bin_dict["lats"]):
+
+            soil_subset = slstr_pixels_in_amsr2(soil_temp,
+                                  bin_dict,
+                                  targetlat,
+                                  targetlon)
+
+            veg_subset =  slstr_pixels_in_amsr2(veg_temp,
+                                  bin_dict,
+                                  targetlat,
+                                  targetlon)
+
+
+            soil_mean_list.append(subset_statistics(soil_subset)[1]["mean"])
+            soil_std_list.append(subset_statistics(soil_subset)[1]["std"])
+
+            veg_mean_list.append(subset_statistics(veg_subset)[1]["mean"])
+            veg_std_list.append(subset_statistics(veg_subset)[1]["std"])
+
+            x = np.arange(len(veg_mean_list))
+
+    veg_mean_list = sorted(veg_mean_list)
+    veg_std_list = sorted(veg_std_list)
+    soil_mean_list = sorted(soil_mean_list)
+    soil_std_list = sorted(soil_std_list)
 
     plt.figure()
-    soil_subset.plot(x="lon", y = "lat")
-    plt.title("Soil")
-    plt.show()
-    plt.figure()
-    veg_subset.plot(x="lon", y = "lat")
-    plt.title("Vegetation")
-    plt.show()
+    plt.plot(x, veg_mean_list, label='Vegetation Mean', color='forestgreen', linewidth=2)
+    plt.fill_between(x,
+                     np.array(veg_mean_list) - np.array(veg_std_list),
+                     np.array(veg_mean_list) + np.array(veg_std_list),
+                     color='forestgreen', alpha=0.2, label='Veg $\pm 1 \sigma$')
 
-    boxplot_soil_veg(soil_subset,veg_subset,ndvi_thres)
+    # Plot Soil Data
+    plt.plot(x, soil_mean_list, label='Soil Mean', color='saddlebrown', linewidth=2)
+    plt.fill_between(x,
+                     np.array(soil_mean_list) - np.array(soil_std_list),
+                     np.array(soil_mean_list) + np.array(soil_std_list),
+                     color='saddlebrown', alpha=0.2, label='Soil $\pm 1 \sigma$')
+
+    plt.ylabel('Land Surface Temperature [K]')
+    plt.title('Sub-pixel LST Statistics per Coarse Pixel')
+    plt.legend(loc='upper left', frameon=True)
+
+    plt.tight_layout()
+    plt.show()
+            # boxplot_soil_veg(soil_subset,veg_subset,ndvi_thres,  bins =100)
 
 ##
     # soil_plot_params = {"x": "lon",
