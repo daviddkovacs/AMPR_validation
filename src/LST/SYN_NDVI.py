@@ -109,14 +109,14 @@ if __name__=="__main__":
 
     soil_mean_list = []
     soil_std_list = []
-
     TSURF_list = []
 
     bin_dict = binning_smaller_pixels(SLSTR_obs["NDVI"], TSURF)
 
     for targetlon in np.unique(bin_dict["lons"]):
         for targetlat in np.unique(bin_dict["lats"]):
-
+    # for targetlon in range(2,3):
+    #     for targetlat in range(2,3):
             soil_subset = slstr_pixels_in_amsr2(soil_temp,
                                   bin_dict,
                                   targetlat,
@@ -126,34 +126,39 @@ if __name__=="__main__":
                                   bin_dict,
                                   targetlat,
                                   targetlon)
-
+            TSURF_subset = TSURF.isel(lat=targetlat-1,lon=targetlon-1)
 
             soil_mean_list.append(subset_statistics(soil_subset)[1]["mean"])
             soil_std_list.append(subset_statistics(soil_subset)[1]["std"])
 
             veg_mean_list.append(subset_statistics(veg_subset)[1]["mean"])
             veg_std_list.append(subset_statistics(veg_subset)[1]["std"])
-
+            TSURF_list.append(TSURF_subset.values)
             x = np.arange(len(veg_mean_list))
 
-    veg_mean_list = sorted(veg_mean_list)
-    veg_std_list = sorted(veg_std_list)
-    soil_mean_list = sorted(soil_mean_list)
-    soil_std_list = sorted(soil_std_list)
-
+            plt.figure()
+            TSURF.plot()
+            plt.show()
+            plt.figure()
+            soil_subset.plot(x = "lon",y = "lat")
+            plt.show()
+            plt.figure()
+            veg_subset.plot(x = "lon",y = "lat")
+            plt.show()
     plt.figure()
+    plt.plot(x, TSURF_list, label='Ka TSURF', color='red', linewidth=2)
+
     plt.plot(x, veg_mean_list, label='Vegetation Mean', color='forestgreen', linewidth=2)
     plt.fill_between(x,
                      np.array(veg_mean_list) - np.array(veg_std_list),
                      np.array(veg_mean_list) + np.array(veg_std_list),
-                     color='forestgreen', alpha=0.2, label='Veg $\pm 1 \sigma$')
+                     color='forestgreen', alpha=0.2,)
 
-    # Plot Soil Data
     plt.plot(x, soil_mean_list, label='Soil Mean', color='saddlebrown', linewidth=2)
     plt.fill_between(x,
                      np.array(soil_mean_list) - np.array(soil_std_list),
                      np.array(soil_mean_list) + np.array(soil_std_list),
-                     color='saddlebrown', alpha=0.2, label='Soil $\pm 1 \sigma$')
+                     color='saddlebrown', alpha=0.2, )
 
     plt.ylabel('Land Surface Temperature [K]')
     plt.title('Sub-pixel LST Statistics per Coarse Pixel')

@@ -181,9 +181,23 @@ def snow_filtering(dataset,
 
     return xr.where(snowy, np.nan, dataset)
 
+
+def get_edges(centers):
+    """
+    Calculate the spacing between pixels, to properly handle np.digitize. Otherwise offset.
+    """
+    res = np.abs(np.diff(centers)[0])
+
+    edges = np.append(centers - res / 2, centers[-1] + res / 2)
+    return np.sort(edges)
+
 def binning_smaller_pixels(slstr_da,amsr2_da):
 
+    # lat_edges = get_edges(amsr2_da.lat.values)
+    # lon_edges = get_edges(amsr2_da.lon.values)
+
     iterables = {}
+
     iterables["lats"] = np.digitize(slstr_da.lat.values, amsr2_da.lat.values)
     iterables["lons"] = np.digitize(slstr_da.lon.values, amsr2_da.lon.values)
 
