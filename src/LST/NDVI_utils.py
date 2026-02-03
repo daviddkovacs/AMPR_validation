@@ -66,7 +66,7 @@ def open_amsr2(path,
                time_stop = "2025-01-01",
                ):
 
-    folder = os.path.join(r"G:\My Drive\Munka\CLIMERS\ER2_validation\AMSR2\passive_input\coarse_resolution",overpass,subdir_pattern,file_pattern)
+    folder = os.path.join(path,sensor,overpass,subdir_pattern,file_pattern)
 
     files = glob.glob(folder)
 
@@ -188,18 +188,19 @@ def get_edges(centers):
     """
     res = np.abs(np.diff(centers)[0])
 
-    edges = np.append(centers - res / 2, centers[-1] + res / 2)
+    # edges = np.append(centers - res / 2, centers[-1] + res / 2)
+    edges = np.append(np.sort(centers) - res / 2, np.sort(centers)[-1] + res / 2)
     return np.sort(edges)
 
 def binning_smaller_pixels(slstr_da,amsr2_da):
 
-    # lat_edges = get_edges(amsr2_da.lat.values)
-    # lon_edges = get_edges(amsr2_da.lon.values)
+    lat_edges = get_edges(amsr2_da.lat.values)
+    lon_edges = get_edges(amsr2_da.lon.values)
 
     iterables = {}
 
-    iterables["lats"] = np.digitize(slstr_da.lat.values, amsr2_da.lat.values)
-    iterables["lons"] = np.digitize(slstr_da.lon.values, amsr2_da.lon.values)
+    iterables["lats"] = np.digitize(slstr_da.lat.values, lat_edges) - 1
+    iterables["lons"] = np.digitize(slstr_da.lon.values, lon_edges) - 1
 
     return iterables
 

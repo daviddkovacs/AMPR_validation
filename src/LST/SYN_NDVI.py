@@ -1,4 +1,4 @@
-from LST.NDVI_utils import snow_filtering
+from LST.NDVI_utils import snow_filtering, get_edges
 from config.paths import SLSTR_path, path_bt
 import xarray as xr
 import numpy as np
@@ -10,6 +10,7 @@ from NDVI_utils import (open_sltsr,
                         cloud_filtering,
                         slstr_pixels_in_amsr2,
                         subset_statistics,
+                        get_edges,
                         binning_smaller_pixels)
 from plot_functions import plot_lst, plot_amsr2, boxplot_soil_veg
 import matplotlib
@@ -54,19 +55,24 @@ if __name__=="__main__":
     date = "2024-08-25"
 
     bbox =   [
-    -98.14778655230879,
+    -98.25,
     35.62525958403951,
     -97.3774255778045,
     36.13940216587241
   ]
     ndvi_thres =0.5
 
-    SLSTR_obs = SLSTR.sel(time=date, method="nearest")
-    SLSTR_obs = crop2roi(SLSTR_obs.compute(),bbox)
-
     AMSR2_obs = AMSR2.sortby('time').sel(time=date, method="nearest")
     AMSR2_obs = crop2roi(AMSR2_obs.compute(),bbox)
     TSURF = AMSR2_obs["bt_36.5V"] * 0.893 + 44.8
+
+    AMSR2_bbox = [get_edges(TSURF.lon.values).min(),
+                  get_edges(TSURF.lat.values).min(),
+                  get_edges(TSURF.lon.values).max(),
+                  get_edges(TSURF.lat.values).max()]
+
+    SLSTR_obs = SLSTR.sel(time=date, method="nearest")
+    SLSTR_obs = crop2roi(SLSTR_obs.compute(),AMSR2_bbox)
 
     soil_temp, veg_temp = threshold_ndvi(lst = SLSTR_obs["LST"], ndvi = SLSTR_obs["NDVI"] ,ndvi_thres = ndvi_thres)
 
@@ -94,12 +100,12 @@ if __name__=="__main__":
         "title" : np.datetime_as_string(AMSR2_obs.time.values, unit='D')
                        }
 
-    plot_lst(left_da = SLSTR_obs["LST"],
-             right_da = SLSTR_obs["NDVI"],
-             left_params=LST_plot_params,
-             right_params= NDVI_plot_params)
+    # plot_lst(left_da = SLSTR_obs["LST"],
+    #          right_da = SLSTR_obs["NDVI"],
+    #          left_params=LST_plot_params,
+    #          right_params= NDVI_plot_params)
 
-    plot_amsr2(TSURF,AMSR2_plot_params)
+    # plot_amsr2(TSURF,AMSR2_plot_params)
 
 ##
     # szerintem ebbol csinaljak majd egy functiont hetfon
@@ -111,12 +117,16 @@ if __name__=="__main__":
     soil_std_list = []
     TSURF_list = []
 
+
+
     bin_dict = binning_smaller_pixels(SLSTR_obs["NDVI"], TSURF)
 
-    for targetlon in np.unique(bin_dict["lons"]):
-        for targetlat in np.unique(bin_dict["lats"]):
-    # for targetlon in range(2,3):
-    #     for targetlat in range(2,3):
+    # for targetlon in np.unique(bin_dict["lons"]):
+    #     for targetlat in np.unique(bin_dict["lats"]):
+    for targetlon in range(2,3):
+        for targetlat in range(1,2):
+            print(TSURF.lon.values)
+            print(TSURF.lat.values)
             soil_subset = slstr_pixels_in_amsr2(soil_temp,
                                   bin_dict,
                                   targetlat,
@@ -126,7 +136,7 @@ if __name__=="__main__":
                                   bin_dict,
                                   targetlat,
                                   targetlon)
-            TSURF_subset = TSURF.isel(lat=targetlat-1,lon=targetlon-1)
+            TSURF_subset = TSURF.isel(lat=targetlat,lon=targetlon)
 
             soil_mean_list.append(subset_statistics(soil_subset)[1]["mean"])
             soil_std_list.append(subset_statistics(soil_subset)[1]["std"])
