@@ -409,9 +409,9 @@ def compare_temperatures(soil_temp, veg_temp, TSURF, TSURFadj = None, MPDI =None
 
                 except Exception as e:
                     print(e)
-    df =  pd.DataFrame({"veg_mean": veg_mean_list,
+    df =  pd.DataFrame({"veg_temp": veg_mean_list,
                              "veg_std": veg_std_list,
-                             "soil_mean": soil_mean_list,
+                             "soil_temp": soil_mean_list,
                              "soil_std": soil_std_list,
                              "tsurf_ka": TSURF_list,
                              "tsurf_adj": TSURFadj_list,

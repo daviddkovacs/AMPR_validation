@@ -73,9 +73,6 @@ if __name__=="__main__":
                        LST_params=LST_plot_params,
                        NDVI_params=NDVI_plot_params,
                        df_S3_pixels_in_AMSR2=_df,
-                       bbox=bbox, plot_mpdi=True,
+                       bbox=bbox,
+                       plot_mpdi=True,
                        mpdi_band = mpdi_band)
-
-    plt.figure()
-    plt.scatter(df["mpdi"], df["soil_mean"])
-    plt.show()

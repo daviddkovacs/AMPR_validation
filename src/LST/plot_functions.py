@@ -157,19 +157,19 @@ def combined_dashboard(LST_L1,
     x_idx = np.arange(len(df_S3_pixels_in_AMSR2))
 
     # Vegetation Stats
-    ax1.plot(x_idx, df_S3_pixels_in_AMSR2["veg_mean"],
+    ax1.plot(x_idx, df_S3_pixels_in_AMSR2["veg_temp"],
              label='Vegetation Mean', color='forestgreen', linewidth=2)
     ax1.fill_between(x_idx,
-                     df_S3_pixels_in_AMSR2["veg_mean"] - df_S3_pixels_in_AMSR2["veg_std"],
-                     df_S3_pixels_in_AMSR2["veg_mean"] + df_S3_pixels_in_AMSR2["veg_std"],
+                     df_S3_pixels_in_AMSR2["veg_temp"] - df_S3_pixels_in_AMSR2["veg_std"],
+                     df_S3_pixels_in_AMSR2["veg_temp"] + df_S3_pixels_in_AMSR2["veg_std"],
                      color='forestgreen', alpha=0.2)
 
     # Soil Stats
-    ax1.plot(x_idx, df_S3_pixels_in_AMSR2["soil_mean"],
+    ax1.plot(x_idx, df_S3_pixels_in_AMSR2["soil_temp"],
              label='Soil Mean', color='saddlebrown', linewidth=2)
     ax1.fill_between(x_idx,
-                     df_S3_pixels_in_AMSR2["soil_mean"] - df_S3_pixels_in_AMSR2["soil_std"],
-                     df_S3_pixels_in_AMSR2["soil_mean"] + df_S3_pixels_in_AMSR2["soil_std"],
+                     df_S3_pixels_in_AMSR2["soil_temp"] - df_S3_pixels_in_AMSR2["soil_std"],
+                     df_S3_pixels_in_AMSR2["soil_temp"] + df_S3_pixels_in_AMSR2["soil_std"],
                      color='saddlebrown', alpha=0.2)
 
     # AMSR2 Ka Holmes TSURF
@@ -198,9 +198,9 @@ def combined_dashboard(LST_L1,
         ax_kuka.spines["right"].set_position(("axes", 1.1))
 
         ax_kuka.plot(x_idx, df_S3_pixels_in_AMSR2["kuka"],
-                     label='KuKa', color='yellow', linewidth=1.5)
-        ax_kuka.set_ylabel('KuKa Index', color='yellow')
-        ax_kuka.tick_params(axis='y', labelcolor='yellow')
+                     label='KuKa', color='darkorange', linewidth=1.5)
+        ax_kuka.set_ylabel('KuKa Index', color='darkorange')
+        ax_kuka.tick_params(axis='y', labelcolor='darkorange')
 
         plt.subplots_adjust(right=0.85)
 
