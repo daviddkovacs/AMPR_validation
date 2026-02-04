@@ -100,6 +100,7 @@ def combined_dashboard(LST_L1,
                        df_S3_pixels_in_AMSR2,
                        bbox=None,
                        plot_mpdi=False,
+                       plot_kuka=False,
                        mpdi_band =None):
     """
     Combines Sentinel-3 spatial plots (LST/NDVI) and AMSR2/LST statistical plots into one figure.
@@ -155,6 +156,7 @@ def combined_dashboard(LST_L1,
     ax1 = plt.subplot(2, 2, (3, 4))
     x_idx = np.arange(len(df_S3_pixels_in_AMSR2))
 
+    # Vegetation Stats
     ax1.plot(x_idx, df_S3_pixels_in_AMSR2["veg_mean"],
              label='Vegetation Mean', color='forestgreen', linewidth=2)
     ax1.fill_between(x_idx,
@@ -170,8 +172,12 @@ def combined_dashboard(LST_L1,
                      df_S3_pixels_in_AMSR2["soil_mean"] + df_S3_pixels_in_AMSR2["soil_std"],
                      color='saddlebrown', alpha=0.2)
 
-    # AMSR2 Reference
+    # AMSR2 Ka Holmes TSURF
     ax1.plot(x_idx, df_S3_pixels_in_AMSR2["tsurf_ka"], label='Ka TSURF', color='red', linewidth=2, )
+
+    # AMSR2 Adjusted TSURF
+    ax1.plot(x_idx, df_S3_pixels_in_AMSR2["tsurf_adj"],
+              label='Adj. TSURF', color='magenta', linewidth=1.5)
 
     ax1.set_ylabel(r'Temperature $[K]$')
     ax1.set_xlabel('AMSR2 Pixel Number in ROI')
@@ -179,25 +185,23 @@ def combined_dashboard(LST_L1,
     ax1.legend(loc='upper left', frameon=True)
 
     # Secondary Axis for MPDI
-    if "mpdi" in df_S3_pixels_in_AMSR2.columns and plot_mpdi:
-        # First twin axis for MPDI
+    if plot_mpdi:
         ax_mpdi = ax1.twinx()
         ax_mpdi.plot(x_idx, df_S3_pixels_in_AMSR2["mpdi"],
                      label='MPDI', color='blue', linewidth=1.5)
         ax_mpdi.set_ylabel(f'MPDI {mpdi_band}', color='blue')
         ax_mpdi.tick_params(axis='y', labelcolor='blue')
 
-        # Second twin axis for KuKa
+    if plot_kuka:
         ax_kuka = ax1.twinx()
         # Offset the right spine of the second twin axis so it's not on top of MPDI
         ax_kuka.spines["right"].set_position(("axes", 1.1))
 
         ax_kuka.plot(x_idx, df_S3_pixels_in_AMSR2["kuka"],
-                     label='KuKa', color='magenta', linewidth=1.5)
-        ax_kuka.set_ylabel('KuKa Index', color='magenta')
-        ax_kuka.tick_params(axis='y', labelcolor='magenta')
+                     label='KuKa', color='yellow', linewidth=1.5)
+        ax_kuka.set_ylabel('KuKa Index', color='yellow')
+        ax_kuka.tick_params(axis='y', labelcolor='yellow')
 
-        # Optional: Adjust plot layout to make room for the extra axis on the right
         plt.subplots_adjust(right=0.85)
 
     plt.suptitle(f"Sentinel-3 SLSTR and AMSR2 comparison | {obs_date}", fontsize=18, y=0.98)

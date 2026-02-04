@@ -14,7 +14,7 @@ from config.paths import SLSTR_path, path_bt
 
 # ---------------------------------------
 # DATACUBE PROCESSORS
-def get_nearest_obs(SLSTR, AMSR2, date):
+def temporal_subset_dc(SLSTR, AMSR2, date):
     """
     Select the closest date to SLSTR, and thus select this date to access AMSR2
     """
@@ -26,13 +26,12 @@ def get_nearest_obs(SLSTR, AMSR2, date):
     return {"SLSTR": SLSTR_obs, "AMSR2": AMSR2_obs}
 
 
-def preprocess_datacubes(SLSTR, AMSR2,  bbox):
+def spatial_subset_dc(SLSTR, AMSR2,  bbox):
     """
-    SLSTR is cut to the full spatial extent of AMSR2. Holmes Ka TSURF is calculated for AMSR2.
+    SLSTR is cut to the full spatial extent of AMSR2.
     Both AMSR2 and SLSTR cropped to bbox
     """
     AMSR2 = crop2roi(AMSR2.compute(), bbox)
-    AMSR2["TSURF"] = calc_Holmes_temp(AMSR2["bt_36.5V"])
 
     AMSR2_bbox = [get_edges(AMSR2.lon.values).min(),
                   get_edges(AMSR2.lat.values).min(),
@@ -239,6 +238,14 @@ def calc_Holmes_temp(KaV):
     return KaV * 0.893 + 44.8
 
 
+def calc_adjusted_temp(AMSR2, band = "Ka", mpdi_band = "C1"):
+    """
+    Theoretical MPDI adjusted temperature. Allows for free frequency selection.
+    """
+    Teff = ((0.893 * AMSR2[f"bt_{frequencies[band.upper()]}H"]) / (1 - mpdi(AMSR2,mpdi_band))) + 44.8
+    return Teff
+
+
 def KuKa(AMSR2, num = "Ku",denom = "Ka"):
     """
     Calculate ratio, as seen in SSM/I Cal/Val document
@@ -349,7 +356,7 @@ def slstr_pixels_in_amsr2(slstr_da,
     return pixels_within
 
 
-def compare_temperatures(soil_temp, veg_temp, TSURF, MPDI =None, KUKA = None):
+def compare_temperatures(soil_temp, veg_temp, TSURF, TSURFadj = None, MPDI =None, KUKA = None):
     """
     Gets the underlying SLSTR pixels for every AMSR2 Ka-LST pixel. Then calculates the mean and std for these, and plots
     """
@@ -359,6 +366,7 @@ def compare_temperatures(soil_temp, veg_temp, TSURF, MPDI =None, KUKA = None):
     soil_mean_list = []
     soil_std_list = []
     TSURF_list = []
+    TSURFadj_list = []
     MPDI_list = []
     KUKA_list = []
 
@@ -386,12 +394,18 @@ def compare_temperatures(soil_temp, veg_temp, TSURF, MPDI =None, KUKA = None):
             TSURF_subset = TSURF.isel(lat=targetlat, lon=targetlon)
             TSURF_list.append(TSURF_subset.values.item())
 
+
+
             if MPDI is not None:
                 try:
                     MPDI_subset = MPDI.isel(lat=targetlat, lon=targetlon)
-                    KUKA_subset = KUKA.isel(lat=targetlat, lon=targetlon)
                     MPDI_list.append(MPDI_subset.values.item())
+
+                    KUKA_subset = KUKA.isel(lat=targetlat, lon=targetlon)
                     KUKA_list.append(KUKA_subset.values.item())
+
+                    TSURFadj_subset = TSURFadj.isel(lat=targetlat, lon=targetlon)
+                    TSURFadj_list.append(TSURFadj_subset.values.item())
 
                 except Exception as e:
                     print(e)
@@ -400,10 +414,10 @@ def compare_temperatures(soil_temp, veg_temp, TSURF, MPDI =None, KUKA = None):
                              "soil_mean": soil_mean_list,
                              "soil_std": soil_std_list,
                              "tsurf_ka": TSURF_list,
+                             "tsurf_adj": TSURFadj_list,
                              "mpdi": MPDI_list,
                              "kuka": KUKA_list,
                              })
-
 
     return df
 

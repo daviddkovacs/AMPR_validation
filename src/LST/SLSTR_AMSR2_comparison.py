@@ -1,17 +1,19 @@
 from LST.comparison_utils import (
     SLSTR_AMSR2_datacubes,
-    preprocess_datacubes,
+    spatial_subset_dc,
     threshold_ndvi,
     compare_temperatures,
     mpdi,
     KuKa,
-    get_nearest_obs
+    calc_Holmes_temp,
+    calc_adjusted_temp,
+    temporal_subset_dc,
 )
 from plot_functions import (
     LST_plot_params,
     NDVI_plot_params,
     AMSR2_plot_params,
-    plot_amsr2,combined_dashboard
+    plot_amsr2,combined_dashboard,
 )
 import matplotlib
 import matplotlib.pyplot as plt
@@ -27,29 +29,31 @@ if __name__=="__main__":
 ##
     date = "2024-08-19"
 
-    bbox =  [
-    -4.265869864360127,
-    14.150931271788593,
-    -1.0980552648969706,
-    16.779016882581217
+    bbox = [
+    0.7488211664537516,
+    8.710202589212983,
+    3.311845942978721,
+    11.801767448595541
   ]
     # Soil and Vegetation masks based on NDVI
-    soil_range = [0, 0.5]
+    soil_range = [0, 0.4]
     veg_range = [0.5, 1]
     mpdi_band = "C1"
 
     # get the nearest date observation for SLSTR, select this date for AMSR2
-    DATACUBES_L1B = get_nearest_obs(DATACUBES_L1["SLSTR"],
-                                    DATACUBES_L1["AMSR2"],
-                                    date)
-    # Calculating AMSR2 TSURF, cropping to bbox coords.
-    DATACUBES_L2 = preprocess_datacubes(SLSTR=DATACUBES_L1B["SLSTR"],
-                                        AMSR2 =DATACUBES_L1B["AMSR2"],
-                                        bbox=bbox)
+    DATACUBES_L1B = temporal_subset_dc(SLSTR=DATACUBES_L1["SLSTR"],
+                                       AMSR2=DATACUBES_L1["AMSR2"],
+                                       date=date)
+    # Cropping to bbox coords.
+    DATACUBES_L2 = spatial_subset_dc(SLSTR=DATACUBES_L1B["SLSTR"],
+                                     AMSR2=DATACUBES_L1B["AMSR2"],
+                                     bbox=bbox)
 
     SLSTR_LST = DATACUBES_L2["SLSTR"]["LST"]
     SLSTR_NDVI = DATACUBES_L2["SLSTR"]["NDVI"]
-    AMSR2_LST = DATACUBES_L2["AMSR2"]["TSURF"]
+
+    AMSR2_LST = calc_Holmes_temp(DATACUBES_L2["AMSR2"]["bt_36.5V"])
+    AMSR2_LST_theor = calc_adjusted_temp(DATACUBES_L2["AMSR2"])
     AMSR2_MPDI = mpdi(DATACUBES_L2["AMSR2"],mpdi_band)
     AMSR2_KUKA = KuKa(DATACUBES_L2["AMSR2"], num="C1", denom="ka")
 
@@ -61,7 +65,7 @@ if __name__=="__main__":
 
     # plot_amsr2(AMSR2_LST,AMSR2_plot_params)
 
-    df = compare_temperatures(soil_temp, veg_temp, AMSR2_LST, MPDI=AMSR2_MPDI, KUKA=AMSR2_KUKA)
+    df = compare_temperatures(soil_temp, veg_temp, AMSR2_LST, MPDI=AMSR2_MPDI, KUKA=AMSR2_KUKA, TSURFadj=AMSR2_LST_theor)
     _df = df.sort_values(by="tsurf_ka")
 
     combined_dashboard(LST_L1=DATACUBES_L1B["SLSTR"]["LST"],
