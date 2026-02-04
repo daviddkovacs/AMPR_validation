@@ -7,8 +7,9 @@ import xarray as xr
 import numpy as np
 from pandas import Timestamp,Timedelta
 from utilities.plotting import temp_sm_plot
-from config.paths import sat_stack_path,ismn_data_path, path_aux
-from utilities.retrieval_helpers import retrieve_LPRM,tiff_df
+from config.paths import (sat_stack_path_day,sat_stack_path_night,
+                          ismn_data_path, path_aux)
+from utilities.retrieval_helpers import retrieve_LPRM,tiff_df, get_ISMN_data
 from utilities.utils import local_solar_time,get_dates
 import itertools
 import pandas as pd
@@ -92,17 +93,18 @@ def run_ismn_multi_site(satellite_data,
 
 ##
 
-def temperature_distribution(satellite_data,
-                        ISMN_instance,
-                        site,
-                        ts_cutoff,
-                        depth_selection,
-                        dates,
-                        network = "SCAN"
-                        ):
+def temperature_distribution(satellite_day,
+                             satellite_night,
+                             ISMN_instance,
+                             site,
+                             dates,
+                             network = "SCAN",
+                             target = None
+                             ):
     """
     This function runs LPRM for a number of combinations of T_canopy and T_soil. It plots the difference to target SM.
-    :param satellite_data: Satellite data containing BT  values. Usually the output of "run_triangle.py"
+    :param satellite_day: Satellite data containing BT  values. Usually the output of "run_triangle.py"
+    :param satellite_night: Satellite data containing LPRM night  values.
     :param ISMN_instance: ISMN_Interface instance from .zip
     :param site: List of site (singular) to process from network.
     :param ts_cutoff: Max date to limit sensor timespan.
@@ -114,26 +116,20 @@ def temperature_distribution(satellite_data,
     NETWORK_stack = ISMN_instance[network]
     SINGLE_STATION = NETWORK_stack[site]
 
-    _sat_data = satellite_data.sel(
+    _sat_data = satellite_day.sel(
                 LAT =SINGLE_STATION.lat,
                 LON =SINGLE_STATION.lon,
                 method = "nearest"
             ).expand_dims(['LAT','LON']).to_dataframe()
 
-    base_coniditons = (
-        (ISMN_stack.metadata['instrument'].depth_from >= depth_selection["start"]) &
-        (ISMN_stack.metadata['instrument'].depth_to < depth_selection["end"]) &
-        (ISMN_stack.metadata["timerange_to"].val > ts_cutoff + Timedelta(days=1)) &
-        (ISMN_stack.metadata['station'].val == station_user)
-    )
+    _sat_night = satellite_night.sel(
+                LAT =SINGLE_STATION.lat,
+                LON =SINGLE_STATION.lon,
+                method = "nearest"
+            ).expand_dims(['LAT','LON']).to_dataframe()
 
-    conditions_sm = base_coniditons & (ISMN_stack.metadata['variable'].val == 'soil_moisture')
-    conditions_st = base_coniditons & (ISMN_stack.metadata['variable'].val == 'soil_temperature')
-
-    ids_sm = ISMN_stack.metadata[conditions_sm].index.to_list()
-    ids_st = ISMN_stack.metadata[conditions_st].index.to_list()
-    ts_sm, meta_sm = ISMN_stack.read(ids_sm, return_meta=True)
-    ts_st, meta_st = ISMN_stack.read(ids_st, return_meta=True)
+    # Get insitu SM and surface T
+    ts_sm, meta_sm, ts_st, meta_st = get_ISMN_data(ISMN_stack,site)
 
     aux_df = tiff_df(path_aux)
     T_soil_range = np.arange(273,330,1)
@@ -167,6 +163,7 @@ def temperature_distribution(satellite_data,
         while not success:
             try:
                 sat_day = _sat_data.drop(columns=["SM_ADJ"]).xs(day_i, level="time")
+                sat_night = _sat_night.xs(day_i, level="time")
 
                 sol_time = local_solar_time(
                     sat_day["SCANTIME_BT"].values.item(),
@@ -179,7 +176,12 @@ def temperature_distribution(satellite_data,
                 closest_insitu_sm = ts_sm.iloc[i_sm]
                 closest_insitu_st = ts_st.iloc[i_st]
 
-                SM_target = closest_insitu_sm.xs("soil_moisture", level="variable").dropna().values[0]
+
+                target_sm_dict =  {
+                    "insitu": closest_insitu_sm.xs("soil_moisture", level="variable").dropna().values[0],
+                    "night": sat_night["SM_X"].values[0]}
+
+                SM_target = target_sm_dict[target]
                 ST_target = closest_insitu_st.xs("soil_temperature", level="variable").dropna().values[0]+273.15
 
                 logger = {"Soil": [], "Canopy": [], "SM": [], "dif": []}
@@ -199,7 +201,7 @@ def temperature_distribution(satellite_data,
                     logger["Soil"].append(T_soil_i)
                     logger["Canopy"].append(T_canopy_i)
                     logger["SM"].append(SM_i)
-                    logger["dif"].append(SM_target - SM_i)
+                    logger["dif"].append(SM_i - SM_target)
 
                 df_logger = pd.DataFrame(logger).sort_values(by="dif", key=abs)
 
@@ -219,7 +221,7 @@ def temperature_distribution(satellite_data,
                 ax.scatter(sat_day["T_soil_hull"], 273, color='sienna', label="T_soil LPRM", marker="X")
                 ax.scatter(273, sat_day["T_canopy_hull"], color='forestgreen', label="T_canopy LPRM", marker="X")
 
-                ax.set_title(f"{SM_target} | {closest_insitu_sm.name}")
+                ax.set_title(f"{np.round(SM_target,2)}  | {closest_insitu_sm.name}")
                 ax.set_xlabel("Soil")
                 ax.set_ylabel("Canopy")
                 ax.grid(False)
@@ -245,7 +247,8 @@ def temperature_distribution(satellite_data,
 
 ##
 
-sat_data = xr.open_dataset(sat_stack_path)
+sat_day = xr.open_dataset(sat_stack_path_day,decode_timedelta=False)
+sat_night = xr.open_dataset(sat_stack_path_night,decode_timedelta=False)
 ISMN_stack = ISMN_Interface(ismn_data_path, parallel=True)
 ts_cutoff = Timestamp("2024-06-01")
 dates = get_dates(Timestamp("2024-01-01"), Timestamp("2024-12-01"), freq="ME")
@@ -258,16 +261,16 @@ station_user = 'BeasleyLake'
 
 if __name__ == "__main__":
 
-    # run_ismn_multi_site(satellite_data=sat_data,
+    # run_ismn_multi_site(satellite_data=sat_day,
     #                     ISMN_instance=ISMN_stack,
     #                     sites=  [station_user],
     #                     ts_cutoff=ts_cutoff,
     #                     depth_selection=depth_selection)
 
-    temperature_distribution(satellite_data=sat_data,
-                        ISMN_instance=ISMN_stack,
-                        site=  station_user,
-                        ts_cutoff=ts_cutoff,
-                        depth_selection=depth_selection,
-                        dates = dates)
+    temperature_distribution(satellite_day=sat_day,
+                             satellite_night=sat_night,
+                             ISMN_instance=ISMN_stack,
+                             site=station_user,
+                             dates=dates,
+                             target = "insitu")
 
