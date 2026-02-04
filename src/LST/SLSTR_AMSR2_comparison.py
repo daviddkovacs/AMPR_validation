@@ -25,15 +25,15 @@ matplotlib.use("TkAgg")
 #     L2: AMSR2 TSURF calculated, both cropped to ROI.
 
 if __name__=="__main__":
-    DATACUBES_L1 = SLSTR_AMSR2_datacubes(region="sahel")
+    DATACUBES_L1 = SLSTR_AMSR2_datacubes(region="midwest")
 ##
-    date = "2024-08-19"
+    date = "2024-02-19"
 
-    bbox = [
-    0.7488211664537516,
-    8.710202589212983,
-    3.311845942978721,
-    11.801767448595541
+    bbox =[
+    -94.7316211058726,
+    30.419537516476126,
+    -92.53775776141882,
+    33.274211442582015
   ]
     # Soil and Vegetation masks based on NDVI
     soil_range = [0, 0.4]
@@ -53,9 +53,9 @@ if __name__=="__main__":
     SLSTR_NDVI = DATACUBES_L2["SLSTR"]["NDVI"]
 
     AMSR2_LST = calc_Holmes_temp(DATACUBES_L2["AMSR2"]["bt_36.5V"])
-    AMSR2_LST_theor = calc_adjusted_temp(DATACUBES_L2["AMSR2"])
+    AMSR2_LST_theor = calc_adjusted_temp(DATACUBES_L2["AMSR2"], bandH= "ku", mpdi_band=mpdi_band)
     AMSR2_MPDI = mpdi(DATACUBES_L2["AMSR2"],mpdi_band)
-    AMSR2_KUKA = KuKa(DATACUBES_L2["AMSR2"], num="C1", denom="ka")
+    AMSR2_KUKA = KuKa(DATACUBES_L2["AMSR2"], num="ku", denom="ka")
 
     soil_temp, veg_temp = threshold_ndvi(lst = SLSTR_LST,
                                          ndvi = SLSTR_NDVI,

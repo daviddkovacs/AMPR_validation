@@ -238,11 +238,11 @@ def calc_Holmes_temp(KaV):
     return KaV * 0.893 + 44.8
 
 
-def calc_adjusted_temp(AMSR2, band = "Ka", mpdi_band = "C1"):
+def calc_adjusted_temp(AMSR2, bandH = "Ka", mpdi_band = "C1"):
     """
     Theoretical MPDI adjusted temperature. Allows for free frequency selection.
     """
-    Teff = ((0.893 * AMSR2[f"bt_{frequencies[band.upper()]}H"]) / (1 - mpdi(AMSR2,mpdi_band))) + 44.8
+    Teff = ((0.893 * AMSR2[f"bt_{frequencies[bandH.upper()]}H"]) / (1 - mpdi(AMSR2,mpdi_band)/-1)) + 44.8
     return Teff
 
 
