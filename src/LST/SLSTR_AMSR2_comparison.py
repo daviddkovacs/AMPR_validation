@@ -38,10 +38,10 @@ def preprocess_datacubes(SLSTR, AMSR2, date, bbox):
              right_params=NDVI_plot_params,
              bbox=bbox)
 
-    plot_lst(left_da=SLSTR_roi["LST"],
-             right_da=SLSTR_roi["NDVI"],
-             left_params=LST_plot_params,
-             right_params=NDVI_plot_params)
+    # plot_lst(left_da=SLSTR_roi["LST"],
+    #          right_da=SLSTR_roi["NDVI"],
+    #          left_params=LST_plot_params,
+    #          right_params=NDVI_plot_params)
 
     return {"SLSTR": SLSTR_roi, "AMSR2": AMSR2_roi}
 
@@ -73,8 +73,8 @@ def SLSTR_AMSR2_datacubes(SLSTR_path = SLSTR_path, AMSR2_path =path_bt ):
                        subdir_pattern=f"20*",
                        file_pattern="amsr2_l1bt_*.nc",
                        date_pattern=r"_(\d{8})_",
-                       time_start="2024-05-01",
-                       time_stop="2025-07-01",
+                       time_start="2024-01-01",
+                       time_stop="2025-01-01",
                        )
 
 
@@ -86,13 +86,13 @@ def SLSTR_AMSR2_datacubes(SLSTR_path = SLSTR_path, AMSR2_path =path_bt ):
 if __name__=="__main__":
     DATACUBES = SLSTR_AMSR2_datacubes()
 ##
-    date = "2024-06-25"
+    date = "2024-04-25"
 
-    bbox = [
-    -95.9672010619575,
-    34.18142876649088,
-    -94.94723578103023,
-    34.8939502542632
+    bbox =  [
+    -105.35388677738635,
+    31.081231952565545,
+    -100.97999785526429,
+    33.873041636022975
   ]
 
     ndvi_threshold  = 0.5
@@ -115,3 +115,4 @@ if __name__=="__main__":
     df = compare_temperatures(soil_temp,veg_temp,AMSR2_LST)
     _df = df.dropna(subset="tsurf_ka")
     temps_plot(_df)
+

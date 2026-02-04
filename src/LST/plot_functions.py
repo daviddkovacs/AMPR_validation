@@ -94,48 +94,9 @@ def plot_amsr2(ds,
         vmin=plot_params["vmin"],
         vmax=plot_params["vmax"]
     )
-    plt.title(f"AMSR2 LST {ds.time}")
+    plt.title(f"AMSR2 LST\n{ds.time.dt.strftime("%Y-%m-%d").item()}")
     plt.show()
 
-
-def boxplot_soil_veg(soil, veg, ndvi_thres=0.3, bins =200):
-
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-
-    soil_filtered, _ = subset_statistics(soil)
-    veg_filtered, _ = subset_statistics(veg)
-
-    ax1.hist(soil_filtered,
-             bins=bins,
-             alpha=0.8,
-             label=f"$T_{{soil}}$ (NDVI < {ndvi_thres})",
-             color="brown")
-    ax1.hist(veg_filtered,
-             bins=bins,
-             alpha=0.7,
-             label=f"$T_{{vegetation}}$ (NDVI > {ndvi_thres})",
-             color="green")
-    ax1.set_xlabel("$T$ [K]")
-    ax1.set_ylabel("frequency")
-    ax1.set_title("Temp Distribution")
-    ax1.legend(loc="upper left")
-
-    data_to_plot = [filternan(soil), filternan(veg)]
-    bp = ax2.boxplot(data_to_plot,
-                     patch_artist=True,
-                     showfliers=False,
-                     tick_labels=[f"Soil", f"Veg"])
-
-    colors = ["brown", "green"]
-    for patch, color in zip(bp['boxes'], colors):
-        patch.set_facecolor(color)
-        patch.set_alpha(0.7)
-
-    ax2.set_ylabel("$T$ [K]")
-    ax2.set_title("Soil/Veg. Temp Boxplot")
-
-    plt.tight_layout()
-    plt.show()
 
 
 def temps_plot(df):
@@ -165,5 +126,24 @@ def temps_plot(df):
     plt.legend(loc='upper left', frameon=True)
 
     plt.tight_layout()
+
+    plt.show()
+    plt.figure()
+    plt.scatter(df["tsurf_ka"], df["veg_mean"])
+    plt.xlim([300,320])
+    plt.ylim([300,320])
+    plt.xlabel("AMSR2 Ka T [K]")
+    plt.ylabel("Veg. T [K]")
+    plt.title("Temperatures: Ka - Vegetation")
+    plt.show()
+
+    plt.figure()
+    plt.scatter(df["tsurf_ka"], df["soil_mean"])
+    plt.xlim([300,320])
+    plt.ylim([300,320])
+    plt.xlabel("AMSR2 Ka T [K]")
+    plt.ylabel("Soil T [K]")
+    plt.title("Temperatures: Ka - Soil")
+
     plt.show()
 

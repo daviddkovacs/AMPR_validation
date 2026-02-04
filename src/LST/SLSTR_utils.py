@@ -150,7 +150,7 @@ def cloud_filtering(dataset,
                     cloud_subdir_pattern=f"S3A_SL_2_LST____*",
                     cloud_date_pattern=r'___(\d{8})T(\d{4})',
                     cloud_variable_file="flags_in.nc",
-                    threshold = 1):
+                    threshold = 2):
     """
     Optional cloud masking, with default path and variable parameters to SLSTR cloud flags.
     Strict threshold of 1, filters ALL clouds.
@@ -162,7 +162,7 @@ def cloud_filtering(dataset,
                    variable_file=cloud_variable_file,
                         )
 
-    cloudy = xr.where(CLOUD["cloud_in"]>threshold,True,False )
+    cloudy = xr.where(CLOUD["bayes_in"]==threshold,True,False )
 
     return xr.where(cloudy, np.nan, dataset)
 
