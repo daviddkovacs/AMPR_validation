@@ -246,8 +246,10 @@ def calc_adjusted_temp(AMSR2, factor = 0.6, bandH = "Ka", mpdi_band = "C1"):
         (mpdi(AMSR2, mpdi_band)<=0.05) & (mpdi(AMSR2, mpdi_band)>=0), # Apply only where MPDI is lte 0.05
         mpdi(AMSR2, mpdi_band),
         0.05)
-
-    print(_mpdi)
+    # _factor = xr.where(
+    #     mpdi(AMSR2, mpdi_band)<=0.01,
+    #     0.8,
+    #     0.05)
     Teff = ((0.893 * AMSR2[f"bt_{frequencies[bandH.upper()]}H"]) /
             (1 - _mpdi / factor)) + 44.8
     return Teff

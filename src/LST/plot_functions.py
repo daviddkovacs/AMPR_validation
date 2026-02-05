@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.patches as patches
 import matplotlib
 import matplotlib.pyplot as plt
+from comparison_utils import subset_statistics
 matplotlib.use("TkAgg")
 
 LST_plot_params = {"x": "lon",
@@ -90,6 +91,125 @@ def plot_amsr2(ds,
         vmax=plot_params["vmax"]
     )
     plt.title(f"AMSR2 LST\n{ds.time.dt.strftime("%Y-%m-%d").item()}")
+    plt.show()
+
+
+def usual_stats(x,y):
+    r =x.corr(y)
+    bias = (y - x).mean()
+    rmse = np.sqrt(((y - x) ** 2).mean())
+    return {"r" : r , "bias" : bias , "rmse" : rmse}
+
+
+def combined_validation_dashboard(LST_L1,
+                                  NDVI_L1,
+                                  LST_params,
+                                  NDVI_params,
+                                  df_S3_pixels_in_AMSR2,
+                                  bbox=None,
+                                  plot_mpdi=False, mpdi_band=None,
+                                  scatter_x = None,
+                                  ):
+    """
+    Combines spatial plots, pixel-wise time series, and 1:1 scatter validation.
+    """
+    LST_L1 = LST_L1.isel(time=0) if 'time' in LST_L1.dims and LST_L1.sizes['time'] > 1 else LST_L1.squeeze()
+    NDVI_L1 = NDVI_L1.isel(time=0) if 'time' in NDVI_L1.dims and NDVI_L1.sizes['time'] > 1 else NDVI_L1.squeeze()
+    obs_date = pd.to_datetime(LST_L1.time.values).strftime('%Y-%m-%d')
+
+    fig = plt.figure(figsize=(14, 15))
+    gs = fig.add_gridspec(3, 2)
+
+    ax_lst = fig.add_subplot(gs[0, 0])
+    LST_L1.plot.pcolormesh(x=LST_params["x"], y=LST_params["y"], ax=ax_lst, cmap=LST_params["cmap"],
+                           vmin=LST_params["vmin"], add_colorbar=True, cbar_kwargs=LST_params["cbar_kwargs"])
+    ax_lst.set_title(LST_params["title"])
+
+    ax_ndvi = fig.add_subplot(gs[0, 1])
+    NDVI_L1.plot.pcolormesh(x=NDVI_params["x"], y=NDVI_params["y"], ax=ax_ndvi, cmap=NDVI_params["cmap"],
+                            vmin=NDVI_params.get("vmin"), vmax=NDVI_params.get("vmax"), add_colorbar=True)
+    ax_ndvi.set_title(NDVI_params["title"])
+
+    if bbox:
+        xmin, ymin, xmax, ymax = bbox
+        for ax in [ax_lst, ax_ndvi]:
+            ax.add_patch(patches.Rectangle((xmin, ymin), xmax - xmin, ymax - ymin,
+                                           linewidth=2, edgecolor='red', facecolor='none', linestyle='--'))
+
+    _, tka_s = subset_statistics(df_S3_pixels_in_AMSR2["tsurf_ka"])
+    _, tadj_s = subset_statistics(df_S3_pixels_in_AMSR2["tsurf_adj"])
+    _, soil_s = subset_statistics(df_S3_pixels_in_AMSR2["soil_temp"])
+    _, veg_s = subset_statistics(df_S3_pixels_in_AMSR2["veg_temp"])
+
+    ax1 = fig.add_subplot(gs[1, :])  # Span both columns
+    x_idx = np.arange(len(df_S3_pixels_in_AMSR2))
+
+    #Veg. stats
+    ax1.plot(x_idx, df_S3_pixels_in_AMSR2["veg_temp"],
+             label=f'Veg T ({veg_s["mean"]:.1f}±{veg_s["std"]:.1f}K)',
+             color='forestgreen', linewidth=2)
+    ax1.fill_between(x_idx,
+                     df_S3_pixels_in_AMSR2["veg_temp"] - df_S3_pixels_in_AMSR2["veg_std"],
+                     df_S3_pixels_in_AMSR2["veg_temp"] + df_S3_pixels_in_AMSR2["veg_std"],
+                     color='forestgreen', alpha=0.2)
+
+    # Soil Stats
+    ax1.plot(x_idx, df_S3_pixels_in_AMSR2["soil_temp"],
+             label=f'Soil T ({soil_s["mean"]:.1f}±{soil_s["std"]:.1f}K)',
+             color='saddlebrown', linewidth=2)
+    ax1.fill_between(x_idx,
+                     df_S3_pixels_in_AMSR2["soil_temp"] - df_S3_pixels_in_AMSR2["soil_std"],
+                     df_S3_pixels_in_AMSR2["soil_temp"] + df_S3_pixels_in_AMSR2["soil_std"],
+                     color='saddlebrown', alpha=0.2)
+
+    ax1.plot(x_idx, df_S3_pixels_in_AMSR2["tsurf_ka"],
+             label=f'Ka TSURF ({tka_s["mean"]:.1f}±{tka_s["std"]:.1f}K)',
+             color='red', lw=2)
+    ax1.plot(x_idx, df_S3_pixels_in_AMSR2["tsurf_adj"],
+             label=f'Adj TSURF ({tadj_s["mean"]:.1f}±{tadj_s["std"]:.1f}K)',
+             color='magenta', lw=1.5)
+    ax1.set_ylabel('Temperature [K]')
+    ax1.set_title('Sub-pixel LST per AMSR2 pixel')
+    ax1.legend(loc='upper left')
+
+    if plot_mpdi:
+        ax_mpdi = ax1.twinx()
+        ax_mpdi.plot(x_idx, df_S3_pixels_in_AMSR2["mpdi"], color='blue', alpha=0.6)
+        ax_mpdi.tick_params(axis='y', labelcolor='blue')
+        ax_mpdi.set_ylabel(f'MPDI {mpdi_band}', color='blue')
+
+    if not scatter_x: raise ValueError(f"Define x data for scatterplot --> scatter_x = 'veg_temp' or 'soil_temp'" )
+    # Left scatter
+    x1, y1 = df_S3_pixels_in_AMSR2[scatter_x], df_S3_pixels_in_AMSR2["tsurf_ka"]
+    s1_stat = usual_stats(x1, y1)
+
+    ax_scatter1 = fig.add_subplot(gs[2, 0])
+    ax_scatter1.scatter(x1, y1, alpha=0.6, s=20, c='indigo')
+    lims = [min(x1.min(), y1.min()), max(x1.max(), y1.max())]
+    ax_scatter1.plot(lims, lims, 'r--', label='1:1')
+    stats_str = f"r: {s1_stat["r"]:.3f}\nRMSE: {s1_stat["rmse"]:.2f}K\nBias: {s1_stat["bias"]:.2f}K"
+    ax_scatter1.text(0.05, 0.95, stats_str, transform=ax_scatter1.transAxes, verticalalignment='top',
+                    bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+    ax_scatter1.set_title(f"tsurf_ka vs {scatter_x}")
+    ax_scatter1.set_xlabel(f"{scatter_x}")
+    ax_scatter1.set_ylabel("tsurf_ka")
+
+    # Right scatter
+    x2, y2 = x1, df_S3_pixels_in_AMSR2["tsurf_adj"]
+    s2_stat = usual_stats(x2, y2)
+
+    ax_scatter2 = fig.add_subplot(gs[2, 1])
+    ax_scatter2.scatter(x2, y2, alpha=0.6, s=20, c='indigo')
+    ax_scatter2.plot(lims, lims, 'r--', label='1:1')
+    stats_str = f"r: {s2_stat["r"]:.3f}\nRMSE: {s2_stat["rmse"]:.2f}K\nBias: {s2_stat["bias"]:.2f}K"
+    ax_scatter2.text(0.05, 0.95, stats_str, transform=ax_scatter2.transAxes, verticalalignment='top',
+                     bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+    ax_scatter2.set_title(f"tsurf_adj vs {scatter_x}")
+    ax_scatter2.set_xlabel(f"{scatter_x}")
+    ax_scatter2.set_ylabel("tsurf_adj")
+
+    plt.suptitle(f"Sentinel-3 & AMSR2 Analysis | {obs_date}", fontsize=18, y=0.98)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
 
 
@@ -206,27 +326,4 @@ def combined_dashboard(LST_L1,
 
     plt.suptitle(f"Sentinel-3 SLSTR and AMSR2 comparison | {obs_date}", fontsize=18, y=0.98)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    plt.show()
-
-
-def plot_scatter(df, x_col="soil_temp", y_col="tsurf_adj"):
-
-    r = df[x_col].corr(df[y_col])
-    error = df[y_col] - df[x_col]
-    bias = error.mean()
-    rmse = np.sqrt((error ** 2).mean())
-
-    plt.figure(figsize=(6, 5))
-    plt.scatter(df[x_col], df[y_col], alpha=0.8, s=15)
-
-    lims = [df[[x_col, y_col]].min().min(), df[[x_col, y_col]].max().max()]
-    plt.plot(lims, lims, 'r--', label="1:1 Line")
-
-    stats_str = f"r: {r:.3f}\nRMSE: {rmse:.3f}\nBias: {bias:.3f}"
-    plt.text(0.05, 0.85, stats_str, transform=plt.gca().transAxes,
-             bbox=dict(boxstyle='round', facecolor='white')
-             )
-    plt.title(f"x: {x_col}   y: {y_col}")
-    plt.xlabel(x_col)
-    plt.ylabel(y_col)
     plt.show()
