@@ -191,13 +191,13 @@ def combined_validation_dashboard(LST_L1,
 
     if not scatter_x: raise ValueError(f"Define x data for scatterplot --> scatter_x = 'veg_temp' or 'soil_temp'" )
     # Left scatter
-    x1, y1 = df_S3_pixels_in_AMSR2[scatter_x], df_S3_pixels_in_AMSR2["tsurf_ka"]
+    x1, y1 = df_S3_pixels_in_AMSR2[scatter_x], df_S3_pixels_in_AMSR2["kuka"]
     s1_stat = usual_stats(x1, y1)
 
     ax_scatter1 = fig.add_subplot(gs[2, 0])
     ax_scatter1.scatter(x1, y1, alpha=0.6, s=20, c='indigo')
-    lims = [min(x1.min(), y1.min()), max(x1.max(), y1.max())]
-    ax_scatter1.plot(lims, lims, 'r--', label='1:1')
+    # lims = [min(x1.min(), y1.min()), max(x1.max(), y1.max())]
+    # ax_scatter1.plot(lims, lims, 'r--', label='1:1')
     stats_str = f"r: {s1_stat["r"]:.3f}\nRMSE: {s1_stat["rmse"]:.2f}K\nBias: {s1_stat["bias"]:.2f}K"
     ax_scatter1.text(0.05, 0.95, stats_str, transform=ax_scatter1.transAxes, verticalalignment='top',
                     bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
@@ -211,13 +211,14 @@ def combined_validation_dashboard(LST_L1,
 
     ax_scatter2 = fig.add_subplot(gs[2, 1])
     ax_scatter2.scatter(x2, y2, alpha=0.6, s=20, c='indigo')
-    ax_scatter2.plot(lims, lims, 'r--', label='1:1')
+    # ax_scatter2.plot(lims, lims, 'r--', label='1:1')
     stats_str = f"r: {s2_stat["r"]:.3f}\nRMSE: {s2_stat["rmse"]:.2f}K\nBias: {s2_stat["bias"]:.2f}K"
     ax_scatter2.text(0.05, 0.95, stats_str, transform=ax_scatter2.transAxes, verticalalignment='top',
                      bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
     ax_scatter2.set_title(f"tsurf_adj vs {scatter_x}")
     ax_scatter2.set_xlabel(f"{scatter_x}")
     ax_scatter2.set_ylabel("tsurf_adj")
+
 
     plt.suptitle(f"Sentinel-3 & AMSR2 Analysis | {obs_date}", fontsize=18, y=0.98)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])

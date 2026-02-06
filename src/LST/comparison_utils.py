@@ -41,7 +41,7 @@ def spatial_subset_dc(SLSTR, AMSR2,  bbox):
     return {"SLSTR": SLSTR_roi, "AMSR2": AMSR2}
 
 
-def SLSTR_AMSR2_datacubes( region : Literal["sahel", "siberia", "midwest"],
+def SLSTR_AMSR2_datacubes( region : Literal["sahel", "siberia", "midwest","ceu"],
                            SLSTR_path = SLSTR_path,
                            AMSR2_path = path_bt,):
     """
@@ -75,6 +75,7 @@ def SLSTR_AMSR2_datacubes( region : Literal["sahel", "siberia", "midwest"],
                        date_pattern=r"_(\d{8})_",
                        time_start="2024-01-01",
                        time_stop="2025-01-01",
+                       resolution = "coarse_resolution",
                        )
 
 
@@ -88,15 +89,16 @@ def SLSTR_AMSR2_datacubes( region : Literal["sahel", "siberia", "midwest"],
 # RAW SATELLITE PROCESSORS
 def open_amsr2(path,
                sensor,
-               date_pattern,
                overpass,
+               date_pattern,
                subdir_pattern,
                file_pattern,
+               resolution: Literal["coarse_resolution","medium_resolution"],
                time_start = "2024-01-01",
                time_stop = "2025-01-01",
                ):
 
-    folder = os.path.join(path,sensor,overpass,subdir_pattern,file_pattern)
+    folder = os.path.join(path,resolution,sensor,overpass,subdir_pattern,file_pattern)
 
     files = glob.glob(folder)
 
